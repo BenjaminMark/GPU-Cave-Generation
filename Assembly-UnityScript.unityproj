@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+	<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+	<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+	<ProductVersion>10.0.20506</ProductVersion>
+	<SchemaVersion>2.0</SchemaVersion>
+	<ProjectGuid>{0A592647-AE11-712C-6959-9C86D114B507}</ProjectGuid>
+	<OutputType>Library</OutputType>
+	<AppDesignerFolder>Properties</AppDesignerFolder>
+	<RootNamespace></RootNamespace>
+	<AssemblyName>Assembly-UnityScript</AssemblyName>
+	<TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+	<FileAlignment>512</FileAlignment>
+	<BaseDirectory>Assets</BaseDirectory>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+	<DebugSymbols>true</DebugSymbols>
+	<DebugType>full</DebugType>
+	<Optimize>false</Optimize>
+	<OutputPath>Temp\bin\Debug\</OutputPath>
+	<DefineConstants>DEBUG;TRACE;UNITY_4_5_2;UNITY_4_5;UNITY_STANDALONE_WIN;ENABLE_MICROPHONE;ENABLE_TEXTUREID_MAP;ENABLE_UNITYEVENTS;ENABLE_NEW_HIERARCHY ;ENABLE_AUDIO_FMOD;UNITY_STANDALONE;ENABLE_MONO;ENABLE_TERRAIN;ENABLE_SUBSTANCE;ENABLE_GENERICS;INCLUDE_WP8SUPPORT;ENABLE_MOVIES;ENABLE_WWW;ENABLE_IMAGEEFFECTS;ENABLE_WEBCAM;INCLUDE_METROSUPPORT;RENDER_SOFTWARE_CURSOR;ENABLE_NETWORK;ENABLE_PHYSICS;ENABLE_CACHING;ENABLE_CLOTH;ENABLE_2D_PHYSICS;ENABLE_SHADOWS;ENABLE_AUDIO;ENABLE_NAVMESH_CARVING;ENABLE_DUCK_TYPING;ENABLE_SINGLE_INSTANCE_BUILD_SETTING;ENABLE_PROFILER;UNITY_EDITOR;UNITY_EDITOR_WIN;CROSS_PLATFORM_INPUT</DefineConstants>
+	<ErrorReport>prompt</ErrorReport>
+	<WarningLevel>4</WarningLevel>
+	<NoWarn>0169</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+	<DebugType>pdbonly</DebugType>
+	<Optimize>true</Optimize>
+	<OutputPath>Temp\bin\Release\</OutputPath>
+	<DefineConstants>TRACE</DefineConstants>
+	<ErrorReport>prompt</ErrorReport>
+	<WarningLevel>4</WarningLevel>
+	<NoWarn>0169</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+	<Reference Include="System" />
+    <Reference Include="System.XML" />
+	<Reference Include="System.Core" />
+	<Reference Include="System.Xml.Linq" />
+	<Reference Include="UnityEngine">
+	  <HintPath>H:/Unity/Editor/Data/Managed/UnityEngine.dll</HintPath>
+	</Reference>
+	<Reference Include="UnityEditor">
+	  <HintPath>H:/Unity/Editor/Data/Managed/UnityEditor.dll</HintPath>
+	</Reference>
+  </ItemGroup>
+  <ItemGroup>
+     <Compile Include="Assets\L-System\FlyingCamera.js" />
+     <None Include="Assets\Standard Assets\Shaders\UnlitAlpha.shader" />
+     <None Include="Assets\Standard Assets\Shaders\ScrawkShaderWorleyVoronoi\2D\Diffuse2D.shader" />
+     <None Include="Assets\Standard Assets\Projectors\Guidelines.txt" />
+     <None Include="Assets\VoxelCube\vDarkVoxelCubeShader.shader" />
+     <None Include="Assets\Standard Assets\Shaders\UnlitTextureOnTop.shader" />
+     <None Include="Assets\Standard Assets\Shaders\ScrawkShaderWorleyVoronoi\Misc\TessellationFixed.shader" />
+     <None Include="Assets\Standard Assets\Toon Shading\Sources\Shaders\Toony-Basic.shader" />
+     <None Include="Assets\L-System\newRules-nonsmooth.txt" />
+     <None Include="Assets\Standard Assets\Projectors\Sources\Shaders\Projector Multiply.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\4_newLandMarks.compute" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\(bak)simpleAutomaton.compute" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\4_landMarks.compute" />
+     <None Include="Assets\VoxelCube\CubeStates\2.6_LoadAndBinaryNoise.compute" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\particles_distort.compute" />
+     <None Include="Assets\Standard Assets\Shaders\noiseSimplexCompact.cginc" />
+     <None Include="Assets\Standard Assets\Shaders\OutlinedDiffuseMean.shader" />
+     <None Include="Assets\systems\niceStuffDownBelow.xml" />
+     <None Include="Assets\VoxelCube\VoxelCubeShader.shader" />
+     <None Include="Assets\VoxelCube\DebugVoxelCubeShader 1.shader" />
+     <None Include="Assets\Standard Assets\Shaders\UnlitTextureOnTopOneOne.shader" />
+     <None Include="Assets\Standard Assets\Tessellation Shaders\BumpedSpecularSmooth.shader" />
+     <None Include="Assets\systems\awesomesystem00.xml" />
+     <None Include="Assets\VoxelCube\CubeStates\2.6_(curl)LoadAndBinaryNoise.compute" />
+     <None Include="Assets\Standard Assets\Shaders\diffuseAlwaysOnTop.shader" />
+     <None Include="Assets\systems\Coolopencave.xml" />
+     <None Include="Assets\Standard Assets\Particles\Sources\Shaders\Particle Alpha Blend (Queue +100).shader" />
+     <None Include="Assets\Standard Assets\Shaders\ScrawkShaderWorleyVoronoi\4D\TessellationFixed4D.shader" />
+     <None Include="Assets\Standard Assets\Shaders\UnlitAlphaBg.shader" />
+     <None Include="Assets\systems\LSystem.xml" />
+     <None Include="Assets\Standard Assets\Shaders\ScrawkShaderWorleyVoronoi\3D\Diffuse3D.shader" />
+     <None Include="Assets\Standard Assets\Shaders\ScrawkShaderWorleyVoronoi\4D\TextureSpaceNoise4D.shader" />
+     <None Include="Assets\Standard Assets\Shaders\RC-1290 tessellation my mod.shader" />
+     <None Include="Assets\Standard Assets\Shaders\ScrawkShaderWorleyVoronoi\3D\ImprovedVoronoiNoise3D.cginc" />
+     <None Include="Assets\Standard Assets\Shaders\ScrawkShaderWorleyVoronoi\3D\TextureSpaceNoise3D.shader" />
+     <None Include="Assets\Standard Assets\Shaders\UnlitColorOnTop.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\4_landMarks_simultaneous.compute" />
+     <None Include="Assets\Standard Assets\Shaders\DiffuseReflectiveShader.shader" />
+     <None Include="Assets\Standard Assets\Shaders\OutlinedDiffuseNormals.shader" />
+     <None Include="Assets\systems\biginterestingcave.xml" />
+     <None Include="Assets\Standard Assets\Skyboxes\_skybox info.txt" />
+     <None Include="Assets\TestFile.xml" />
+     <None Include="Assets\Standard Assets\Player Characters\Jet Plane\Aircraft\Aircraft Guidelines.txt" />
+     <None Include="Assets\L-System\rules.txt" />
+     <None Include="Assets\systems\BestCaveEver.xml" />
+     <None Include="Assets\VoxelCube\DebugVoxelCubeShader.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\SimplexNoise\noise-simplex.shader" />
+     <None Include="Assets\Standard Assets\Shaders\UnlitTexture.shader" />
+     <None Include="Assets\Standard Assets\Shaders\UnlitColorBg.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\4_landMarks_thin.compute" />
+     <None Include="Assets\systems\Hest.xml" />
+     <None Include="Assets\L-System\nonsmooth.txt" />
+     <None Include="Assets\Standard Assets\Shaders\ScrawkShaderWorleyVoronoi\4D\ImprovedVoronoiNoise4D.cginc" />
+     <None Include="Assets\Standard Assets\Shaders\GSMarchingCubes.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\noiseSimplex.cginc" />
+     <None Include="Assets\systems\interestingtree.xml" />
+     <None Include="Assets\Standard Assets\Shaders\CurlNoise.cginc" />
+     <None Include="Assets\VoxelCube\BakVoxelCubeShader 1.shader" />
+     <None Include="Assets\Plugins\GaussianSampler.txt" />
+     <None Include="Assets\Standard Assets\Toon Shading\Sources\Shaders\Toony-BasicOutline.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\6_DisplayOnly.compute" />
+     <None Include="Assets\Standard Assets\Shaders\ScrawkShaderWorleyVoronoi\3D\TessellationFixed3D.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\1_MoveBrushToNextTile.compute" />
+     <None Include="Assets\Standard Assets\Shaders\OutlinedInvisibleCircle.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\5_VFilterCA.compute" />
+     <None Include="Assets\Standard Assets\Shaders\OutlinedDiffuse3.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\4_newLandMarks 2.compute" />
+     <None Include="Assets\Standard Assets\Shaders\KyleHalladayBetterDiffuse.shader" />
+     <None Include="Assets\systems\newCanyon.xml" />
+     <None Include="Assets\Standard Assets\Shaders\ScrawkShaderWorleyVoronoi\2D\BlitNoise2D.shader" />
+     <None Include="Assets\Standard Assets\Shaders\ScrawkShaderWorleyVoronoi\2D\TessellationFixed2D.shader" />
+     <None Include="Assets\Standard Assets\Shaders\BurningPaper.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\3.5_smoothingAutomaton 1.compute" />
+     <None Include="Assets\Standard Assets\Projectors\Sources\Shaders\Projector Light.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\2.5_LoadAndBinaryNoise.compute" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\4_landMarksTest.compute" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\1_loader.compute" />
+     <None Include="Assets\Standard Assets\Shaders\ReflectiveDiffuseSpec.shader" />
+     <None Include="Assets\Standard Assets\Cross Platform Input\Cross Platform Input Guidelines.txt" />
+     <None Include="Assets\Standard Assets\Shaders\ZeroResourceInvisible.shader" />
+     <None Include="Assets\L-System\rules straightLine.txt" />
+     <None Include="Assets\L-System\newRules-tudor.txt" />
+     <None Include="Assets\Standard Assets\Shaders\ScrawkShaderWorleyVoronoi\4D\Diffuse4D.shader" />
+     <None Include="Assets\Standard Assets\Toon Shading\Sources\Shaders\Toony-LightedOutline.shader" />
+     <None Include="Assets\Standard Assets\Toon Shading\Sources\Shaders\Toony-Lighted.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\bak b4 altershape 2_LoadAndNoise 1.compute" />
+     <None Include="Assets\VoxelCube\CubeStates\2.6_(both)LoadAndBinaryNoise 1.compute" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\3_smoothingAutomaton.compute" />
+     <None Include="Assets\L-System\newRules-tudorBak.txt" />
+     <None Include="Assets\L-System\newRulesTudor-(old)nonsmooth.txt" />
+     <None Include="Assets\Standard Assets\Shaders\ScrawkShaderWorleyVoronoi\2D\ImprovedVoronoiNoise2D.cginc" />
+     <None Include="Assets\VoxelCube\CubeStates\7_PP_Normals.compute" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\4_newLandMarks 1.compute" />
+     <None Include="Assets\systems\temp.xml" />
+     <None Include="Assets\Standard Assets\Shaders\UnlitTextureOnTopMultiply.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\2_LoadAndNoise.compute" />
+     <None Include="Assets\systems\unlikelygood.xml" />
+     <None Include="Assets\Standard Assets\Shaders\UnlitColor.shader" />
+     <None Include="Assets\systems\saved tree 0 .xml" />
+     <None Include="Assets\Standard Assets\Player Characters\Astrella 3rdPerson\Third Person Character\Third Person Character Guidelines.txt" />
+     <None Include="Assets\systems\saved tree 1.xml" />
+     <None Include="Assets\Standard Assets\Cameras\Camera Guidelines.txt" />
+     <None Include="Assets\systems\shortAndSweet.xml" />
+     <None Include="Assets\VoxelCube\CubeStates\3_caveAutomaton.compute" />
+     <None Include="Assets\Standard Assets\Shaders\BurningWall.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\3_simpleAutomaton.compute" />
+     <None Include="Assets\Standard Assets\Tessellation Shaders\BumpedSpecularDisplacement.shader" />
+     <None Include="Assets\L-System\newRules.txt" />
+     <None Include="Assets\systems\hoodooregion.xml" />
+     <None Include="Assets\Standard Assets\Shaders\ReflectiveDiffuseSpecTransp.shader" />
+     <None Include="Assets\systems\saved tree 2.xml" />
+     <None Include="Assets\L-System\SimpleRules.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="Assembly-CSharp-firstpass.csproj">
+      <Project>{F5A00AF9-D324-0242-ACBB-76AC4452D7A8}</Project>      <Name>Assembly-CSharp-firstpass</Name>    </ProjectReference>
+    <ProjectReference Include="Assembly-UnityScript-firstpass.unityproj">
+      <Project>{5C660530-B466-DF26-196C-9D332F1DAD81}</Project>      <Name>Assembly-UnityScript-firstpass</Name>    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+	   Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  
+</Project>

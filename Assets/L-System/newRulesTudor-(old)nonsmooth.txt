@@ -1,0 +1,24 @@
+F;Q;tunnel;0.0
+
+C;FLFLF;tunnel;0.0; Left curve
+/C;SSAAAUFUFUFUFUFUFUBBOOO;tunnel;0.0; Up curve
+/C;SSAAADFDFDFDFDFDFDBBOOO;tunnel;-0.5; Down curve
+C;FRFRF;tunnel;0.0; right curve
+H;FUFFDF;tunnel;0.0; hump
+H;FDFFUF;tunnel;0.0;
+/3;SSAAAUFUFUFDFDFDFBBOOO[RFSAAARFRFRFRFRFRFRBBOOO][LFSSAAALFLFLFLFLFLFLBBOOO];tunnel;0.0;
+//Q;F[RR]FF[LL]F;room;-0.2; Room
+//Q;F[LL]FF[RR]F;room;-0.2; Room
+//Q;F[RFR]FF[LFL]F;room;-0.2; Room
+//Q;F[LFL]FF[RFR]F;room;-0.2; Room
+//Q;F[RRFRRF][LLFLLF][UF]F[RRF[RF][LLF][RRF][LLLF][RRRF]][LLF[LF][LLF][RRF][LLLF][RRRF]][UUFDDF]F[RRFF[LFLF][RFRF]][LLFF[RFRF][LFLF]][UUFDDF][DDDF];room;-0.2; Room
+Q;F[RRFRRF0][LLFLLF0][UF0]F[RRF[RF0][LLF0][RRF0][LLLF0][RRRF0]][LLF[LF0][LLF0][RRF0][LLLF0][RRRF0]][UUFDDF0]F[RRFF[LFLF0][RFRF0]][LLFF[RFRF0][LFLF0]][UUFDDF0][DDDF0];room;-0.2; Room
+T;RFRFRFRF;tunnel;0.0; u turn
+T;LFLFLFLF;tunnel;0.0; u turn
+/T;SSAAAUFUFUFDFDFDFUFUFUFDFDFDFBBOOO;tunnel;-0.5; u turn
+/T;SSAAADFDFDFUFUFUFDFDFDFUFUFUFBBOOO;tunnel;-0.5; u turn
+I;FF;tunnel;0.0; Straight line;
+I;FRF;tunnel;0.0; Straight line;
+I;FLF;tunnel;0.0; Straight line;
+I;FUF;tunnel;-0.2;
+I;FDF;tunnel;-0.2;

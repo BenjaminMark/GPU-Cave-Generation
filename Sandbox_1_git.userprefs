@@ -1,0 +1,54 @@
+﻿<Properties>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="MonoDevelop.Default" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\VoxelCube\CubeStates\2.6_LoadAndBinaryNoise.compute">
+    <Files>
+      <File FileName="Assets\L-System\newRules-tudor.txt" Line="2" Column="111" />
+      <File FileName="Assets\VoxelCube\InputManager.cs" Line="1" Column="1" />
+      <File FileName="Assets\VoxelCube\VoxelCubeManager.cs" Line="1" Column="1" />
+      <File FileName="Assets\Standard Assets\Character Controllers\Sources\Scripts\CharacterMotor.js" Line="1" Column="1" />
+      <File FileName="Assets\Standard Assets\Shaders\OutlinedDiffuseMean.shader" Line="1" Column="1" />
+      <File FileName="Assets\MarchingCubes\CubeMarcher.cs" Line="1" Column="1" />
+      <File FileName="Assets\L-System\TileFactory.cs" Line="1" Column="1" />
+      <File FileName="Assets\VoxelCube\CubeStates\S2_LoadAndNoise.cs" Line="1" Column="1" />
+      <File FileName="Assets\VoxelCube\CubeStates\VoxelCubeStateBase.cs" Line="1" Column="1" />
+      <File FileName="Assets\Standard Assets\Player Characters\Jet Plane\Aircraft\Scripts\AeroplaneController.cs" Line="1" Column="1" />
+      <File FileName="Assets\VoxelCube\CubeStates\2.6_LoadAndBinaryNoise.compute" Line="317" Column="15" />
+      <File FileName="Assets\L-System\LSystemManager.cs" Line="9" Column="2" />
+      <File FileName="Assets\Standard Assets\Shaders\OutlinedDiffuseNormals.shader" Line="1" Column="1" />
+      <File FileName="Assets\MarchingCubes\MarchingCubes.cs" Line="1" Column="1" />
+      <File FileName="Assets\VoxelCube\CubeStates\4_newLandMarks.compute" Line="477" Column="24" />
+      <File FileName="Assets\L-System\LSystem.cs" Line="904" Column="6" />
+      <File FileName="Assets\Plugins\DisplayMeshBounds.cs" Line="1" Column="1" />
+      <File FileName="Assets\Plugins\SimplexNoise.cs" Line="1" Column="1" />
+      <File FileName="Assets\VoxelCube\CubeStates\2.6_(curl)LoadAndBinaryNoise.compute" Line="175" Column="48" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore>
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\Plugins\SimplexNoise.cs" line="197" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\Standard Assets\Shaders\OutlinedDiffuseNormals.shader" line="643" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\Standard Assets\Shaders\OutlinedDiffuseNormals.shader" line="669" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\VoxelCube\CubeStates\S6_PP_Normals.cs" line="248" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\VoxelCube\CubeStates\S6_PP_Normals.cs" line="274" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\VoxelCube\CubeStates\S6_PP_Normals.cs" line="334" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\MarchingCubes\MarchingCubes.cs" line="265" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\MarchingCubes\MarchingCubes.cs" line="266" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\Standard Assets\Shaders\ScrawkShaderWorleyVoronoi\3D\ImprovedVoronoiNoise3D.cginc" line="72" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\VoxelCube\CubeStates\2.6_LoadAndBinaryNoise 1.compute" line="172" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\VoxelCube\CubeStates\4_newLandMarks.compute" line="311" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\VoxelCube\VoxelCubeManager.cs" line="318" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\VoxelCube\VoxelCubeManager.cs" line="668" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\Standard Assets\Player Characters\Astrella 3rdPerson\Third Person Character\Scripts\ThirdPersonCharacter.cs" line="278" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\Standard Assets\Player Characters\Astrella 3rdPerson\Third Person Character\Scripts\ThirdPersonCharacter.cs" line="452" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\VoxelCube\InputManager.cs" line="311" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\VoxelCube\CubeStates\4_newLandMarks.compute" line="222" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\VoxelCube\CubeStates\4_newLandMarks.compute" line="220" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\VoxelCube\CubeStates\4_newLandMarks.compute" line="219" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\VoxelCube\CubeStates\4_newLandMarks.compute" line="149" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\VoxelCube\CubeStates\4_newLandMarks.compute" line="119" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\VoxelCube\VoxelCubeManager.cs" line="159" />
+      <Breakpoint file="D:\#College-work\ITU\0 Thesis\PCG\Development\Sandbox_1_git\Assets\L-System\TileFactory.cs" line="84" />
+    </BreakpointStore>
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+</Properties>

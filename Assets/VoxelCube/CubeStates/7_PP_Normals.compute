@@ -1,0 +1,151 @@
+#pragma kernel main
+
+//TODO: NOTE: to syntax highlight this stuff: http://forum.unity3d.com/threads/164982-MonoDevelop-Syntax-Highlighting-for-compute-shaders?p=1127569
+
+// The same particle data structure used by both the compute shader and the shader.
+struct PPParticle
+{
+
+	float3 position;
+	int used;
+	
+	float2 verts;
+	float2 norms; 
+
+};
+
+uint frame;
+
+AppendStructuredBuffer<float3> outNormsASB;
+
+// The buffer holding the particles shared with the regular shader.
+RWStructuredBuffer<PPParticle> postProcessBuffer;
+//float3 cubed_verts[8];
+
+// parameters from GPU
+float deltaTime;									
+
+
+/*
+void calculateNormal(uint i, uint id){
+	float3 side1 = postProcessBuffer[id].verts[i-2] - postProcessBuffer[id].verts[i-1];
+	float3 side2 = postProcessBuffer[id].verts[i-3] - postProcessBuffer[id].verts[i-1];
+	float3 norm = cross(side1, side2);
+	//norm /= length(norm);//TODO norm can never be 0 -- or it will be "indefinite"
+	for(uint q=0; q<3; q++){ 
+		postProcessBuffer[id].norms[id-q] = norm;		
+		
+		//TODO remove this after debug
+		outNormsASB.Append(norm);
+	}
+}
+
+*/
+//[numthreads(32,1,1)] 								// 32 is the minimal size to fullfill the wrap. this is just the number of thread to run by wrap, "x, y, z" make easy 3D indexing.
+[numthreads(32,1,1)] 								// 32 is the minimal size to fullfill the wrap. this is just the number of thread to run by wrap, "x, y, z" make easy 3D indexing.
+//void main (uint3 id : SV_DispatchThreadID, uint3 groupId : SV_GroupID)
+void main (uint3 id : SV_DispatchThreadID)
+{  
+	if(postProcessBuffer[id.x].used == 1){
+	
+		if(frame == 0){
+			//TODO: calculate normals
+			/*
+			for(uint i=0; i< 15; i++){
+				if( postProcessBuffer[id.x].verts[i][0] > 0 ||
+					postProcessBuffer[id.x].verts[i][1] > 0 ||
+					postProcessBuffer[id.x].verts[i][2] > 0
+																){//TODO: how to make this "null" check?
+					
+					if(i%3==0){
+						//postProcessBuffer[id.x].used = i;
+						calculateNormal(i, id.x);
+						
+					}
+					
+					
+					//postProcessBuffer[id.x].used = 5000;
+				}
+				else{
+					//postProcessBuffer[id.x].used = i;
+					break;
+				}
+			}
+		*/
+		}
+		else {
+			
+			
+			/*
+			//test
+			for(int i=0; i< 15; i++){
+				if( postProcessBuffer[id.x].verts[i][0] > 0 ){
+					outNormsASB.Append(postProcessBuffer[id.x].norms[i]);
+					postProcessBuffer[id.x].used = 5000;
+				}
+				else{
+					break;
+				}
+			}
+			*/
+		}
+		
+		//TODO: (float3)(postProcessBuffer[id.x].verts[0]))[0]
+		//postProcessBuffer[id.x].used = (//postProcessBuffer[id.x].verts[1] + 
+											//postProcessBuffer[id.x].verts[1] +
+		//									postProcessBuffer[id.x].verts[2] //+
+											/*postProcessBuffer[id.x].verts[3][0] + 
+											postProcessBuffer[id.x].verts[3][1] +
+											postProcessBuffer[id.x].verts[3][2] +
+											postProcessBuffer[id.x].verts[7][0] + 
+											postProcessBuffer[id.x].verts[7][1] +
+											postProcessBuffer[id.x].verts[7][2]*/
+		//									)
+		//								 * 999999999;//999999
+		postProcessBuffer[id.x].used = 100;
+		
+		if(id.x == 10152){// && id.x <= 10164){//9138){
+			/*
+			postProcessBuffer[0].position[0] = postProcessBuffer[id.x].verts[0];
+			postProcessBuffer[0].position[1] = postProcessBuffer[id.x].verts[1];
+			postProcessBuffer[0].position[2] = postProcessBuffer[id.x].verts[2];
+			postProcessBuffer[0].used = 100;//postProcessBuffer[id.x].verts[0];
+			postProcessBuffer[1].position = postProcessBuffer[id.x].verts[0] + postProcessBuffer[id.x].position;
+			postProcessBuffer[1].position = postProcessBuffer[id.x].verts[1] + postProcessBuffer[id.x].position;
+			postProcessBuffer[1].position = postProcessBuffer[id.x].verts[2] + postProcessBuffer[id.x].position;
+			postProcessBuffer[1].used = 100;
+			*/
+			/*
+			postProcessBuffer[2].position = postProcessBuffer[id.x].verts[2] + postProcessBuffer[id.x].used;
+			postProcessBuffer[2].used = 100;
+			postProcessBuffer[3].position = postProcessBuffer[id.x].verts[3];
+			postProcessBuffer[3].used = 9999999;
+			postProcessBuffer[4].position = postProcessBuffer[id.x].verts[4];
+			postProcessBuffer[4].used = 100;
+			postProcessBuffer[5].position = postProcessBuffer[id.x].verts[5];
+			postProcessBuffer[5].used = 100;
+			postProcessBuffer[6].position = postProcessBuffer[id.x].verts[6];
+			postProcessBuffer[6].used = 100;
+			postProcessBuffer[7].position = postProcessBuffer[id.x].verts[7];
+			postProcessBuffer[7].used = 100;
+			postProcessBuffer[8].position = postProcessBuffer[id.x].verts[8];
+			postProcessBuffer[8].used = 100;
+			postProcessBuffer[9].position = postProcessBuffer[id.x].verts[9];
+			postProcessBuffer[9].used = 100;
+			postProcessBuffer[10].position = postProcessBuffer[id.x].verts[10];
+			postProcessBuffer[10].used = 100;
+			postProcessBuffer[11].position = postProcessBuffer[id.x].verts[11];
+			postProcessBuffer[11].used = 100;
+			postProcessBuffer[12].position = postProcessBuffer[id.x].verts[12];
+			postProcessBuffer[12].used = 100;
+			postProcessBuffer[13].position = postProcessBuffer[id.x].verts[13];
+			postProcessBuffer[13].used = 100;
+			postProcessBuffer[14].position = postProcessBuffer[id.x].verts[14];
+			postProcessBuffer[14].used = 100;
+			*/
+		}
+	}
+	
+		//postProcessBuffer[id.x].used = 999999999;
+		postProcessBuffer[id.x].used = 100;
+}

@@ -1,0 +1,265 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel landMarks
+#include "noiseSimplex.cginc"
+
+struct VoxelParticle
+{
+	float3 position;
+	float3 velocity;
+	float noise;
+	float prevNoise;
+	int flags;
+};
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWStructuredBuffer<VoxelParticle> particleBuffer;
+
+// parameters from GPU
+float deltaTime;									// Even here deltaTime is needed!
+float3 target;										// Mouse position.
+int targetChanged;
+float targetStrengh;								// Strengh, from the inspector!
+float sprayOrbRadius;
+float spacing;
+int cubeSize;
+float3 tilePos;
+int frameNumber;
+int seedMod;
+float3 randomSeed;
+
+
+
+
+//TODO: READ THIS: https://stackoverflow.com/questions/7367770/how-to-flatten-or-index-3d-array-in-1d-array
+//			reverse: https://stackoverflow.com/questions/14845084/how-do-i-convert-a-1d-index-into-a-3d-index?rq=1
+int coordsToIndex(int x, int y,int z){
+	//Flat[x + WIDTH * (y + DEPTH * z)] = Original[x, y, z]
+	
+	//return x + cubeSize * (y + cubeSize * z);
+	//I have moved the x y z 's around, because the formula didn't match the way I built the cube in the first place
+	return x + (cubeSize) * (z + (cubeSize) * y);
+	//return z + (cubeSize*tilePos[0]) * (y + (cubeSize*tilePos[2]) * x); 
+
+}
+
+float rnd(uint seed)
+{
+    seed = (seed ^ 61) ^ (seed >> 16);
+    seed *= 9;
+    seed = seed ^ (seed >> 4);
+    seed *= 0x27d4eb2d;
+    seed = seed ^ (seed >> 15);
+    return asfloat(seed/4294967296.0);
+}
+
+[numthreads(32,1,1)]
+void landMarks (uint3 id : SV_DispatchThreadID)
+{
+	float threshold = 0.0;
+	float anchorlimit = -0.75;//-0.75;
+	int distTop = 0;
+	int distBot = 0;
+	int topOffset = 1;
+	int botOffset = 1;
+
+
+	
+	//if(frameNumber % 2 == 1){
+	if(frameNumber == 2){
+		particleBuffer[id.x].noise = particleBuffer[id.x].prevNoise;
+		return;
+	}
+	
+	
+	VoxelParticle currentPoint = particleBuffer[id.x];
+	
+	int curPosX = currentPoint.position.x-tilePos[0] / spacing;
+	int curPosY = currentPoint.position.y-tilePos[1] / spacing;
+	int curPosZ = currentPoint.position.z-tilePos[2] / spacing;
+
+//ORIGINAL
+	if(frameNumber ==0){
+	
+//TESTING
+		//	this doesn't ever hold true:
+	//if(frameNumber ==0 && particleBuffer[coordsToIndex(curPosX, curPosY, curPosZ)].noise <1.1 &&
+	//particleBuffer[coordsToIndex(curPosX, curPosY, curPosZ)].noise > -1.1 && 
+	//particleBuffer[coordsToIndex(curPosX, curPosY, curPosZ)].noise !=0){
+	
+		//	this works fine, don't ask me why
+	//if(frameNumber ==0 && 
+	//particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing, (particleBuffer[id.x].position.y-tilePos[1]) / spacing, (particleBuffer[id.x].position.z-tilePos[2]) / spacing)].noise <1.1 &&
+	//particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing, (particleBuffer[id.x].position.y-tilePos[1]) / spacing, (particleBuffer[id.x].position.z-tilePos[2]) / spacing)].noise > -1.1 && 
+	//particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing, (particleBuffer[id.x].position.y-tilePos[1]) / spacing, (particleBuffer[id.x].position.z-tilePos[2]) / spacing)].noise !=0){
+// /TESTING	
+	
+
+	
+		//particleBuffer[id.x].prevNoise = particleBuffer[id.x].noise;
+		//TODO: YOU FORGOT THIS IN HERE ^
+		
+		if(particleBuffer[id.x].noise > threshold){
+			return;
+		}
+		
+		float freqModulator = 4.0;
+		
+		float3 lowFreqPoint = particleBuffer[id.x].position;// / freqModulator;
+
+		
+		float lowFreqNoise = snoise(float3(lowFreqPoint.x + randomSeed.x, lowFreqPoint.y + randomSeed.y, lowFreqPoint.z + randomSeed.z));
+		//if(lowFreqNoise > anchorlimit){
+		if(lowFreqNoise > anchorlimit){// && lowFreqNoise < - anchorlimit){
+			return;
+		}
+			
+			
+		//TODO: Here's an idea: 
+		//	1 you pick a point on the Floor.
+		//	2 you do a while to trace upwards until you hit the ceiling. just one tile thick is good enough. it's too wasteful to test 4 or 9 tiles each step.
+		//	3 you identify and store the top and bottom points. you can even directly set the mid point without iterating to it again.
+		//	4 in a separate frame, you do a Cellular Automaton which grows upwards or downwards x steps each frame, or until it hits noise.
+		//		- by this I mean start creating stalactites from both ends in parallel. they stop when they meet, if they meet.
+		//		- this is much faster (works in parallel) and you can start thick and end thin, doing both top and bottom at the same time.		
+		//	either make a column, or a stalactite/stalacmite coupled with stalagmite/stalactite when tiles allow, 
+		//  or a HOODOO from below, with no stalactite above.
+		//  TODO: how to decide/pick between these? have a range. -0.8 and below for stalactites, -0.5 <-> -0.7 hoodoos, -0.5 <-> -0.3 columns
+		// 	expose these intervals as variable ranges in the inspector. a vector4: -1(-0.8, -0.7, -0.5, -0.3)0
+		//if(currentPoint.position.x % 7 ==0 && currentPoint.position.y%7 ==0 && currentPoint.position.z%7 ==0)
+		//	particleBuffer[coordsToIndex(curPosX, curPosY, curPosZ)].prevNoise = -1;
+		
+
+		/*
+		//particleBuffer[id.x].prevNoise = lowFreqNoise; // <---- this works
+		for(int i = 0; i < 10; i++){
+			//particleBuffer[coordsToIndex(curPosX, curPosY-i, curPosZ)].prevNoise = lowFreqNoise; // <--- this don't
+			
+			//and this works:
+			particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing, 
+										 (particleBuffer[id.x].position.y-tilePos[1]) / spacing - i, 
+										 (particleBuffer[id.x].position.z-tilePos[2]) / spacing)
+						  ].prevNoise = lowFreqNoise; 
+						  //TODO: WHY? This is suboptimal as fuck, how come this works and saving indexes in a variable doesn't?
+								//was there something wrong with our variables?
+		}*/
+
+			
+		
+	
+	
+	
+
+		
+		
+		VoxelParticle tempPoint;
+		int sumDownNeighbors = 0;
+		int sumUpNeighbors = 0;
+		//Down
+		for(int x = -1; x <=1; x++){
+			for(int z = -1; z <= 1; z++){
+				for(int y = 1; y < 3; y++){
+				//tempPoint = particleBuffer[coordsToIndex(curPosX + x,
+	    		//									 	 curPosY - y, 
+	    		//									 	 curPosZ + z)];
+	    		tempPoint = particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing, 
+										 (particleBuffer[id.x].position.y-tilePos[1]) / spacing, 
+										 (particleBuffer[id.x].position.z-tilePos[2]) / spacing)
+						  ];									 	 
+	    		if(tempPoint.noise > threshold){
+	    			sumDownNeighbors++;
+	    		}
+	    	}							 			 
+			}
+		}
+	
+		//up
+		for(int i = -1; i <=1; i++){
+			for(int j = -1; j <= 1; j++){
+				//tempPoint = particleBuffer[coordsToIndex(curPosX + i,
+	    		//									 	 curPosY + 1, 
+	    		//									 	 curPosZ + j)];
+	    		tempPoint = particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing + i, 
+										 (particleBuffer[id.x].position.y-tilePos[1]) / spacing +1, 
+										 (particleBuffer[id.x].position.z-tilePos[2]) / spacing + j)
+						  ];
+	    		if(tempPoint.noise > threshold){
+	    			sumUpNeighbors++;
+	    		}							 			 
+			}
+		}
+		
+		if((sumDownNeighbors >=  7)){// && sumUpNeighbors <= 4  )){
+			 //Makes an anchor point.
+			 
+			 
+			 
+			 for(int i = 0; i <= 1; i++){
+	    		for(int j = 0; j <= 1; j++){
+	    			int q = 0;
+	    			int length_ = 0;
+	    			int pos = 1;
+	    			
+	    			
+	    			//tempPoint = particleBuffer[coordsToIndex(curPosX + i,
+	    			//								 	 curPosY - pos, 
+	    			//								 	 curPosZ + j)];
+	    			tempPoint = particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing + i, 
+										 (particleBuffer[id.x].position.y-tilePos[1]) / spacing - pos, 
+										 (particleBuffer[id.x].position.z-tilePos[2]) / spacing + j)
+						  ];
+	    			while(tempPoint.noise > threshold){
+	    				length_++;
+	    				pos++;
+	    				//tempPoint = particleBuffer[coordsToIndex(curPosX + i, curPosY - pos, curPosZ + j)];
+	    				tempPoint = particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing + i, 
+										 (particleBuffer[id.x].position.y-tilePos[1]) / spacing - pos, 
+										 (particleBuffer[id.x].position.z-tilePos[2]) / spacing + j)
+						  ];
+	    				//particleBuffer[coordsToIndex(curPosX + i, curPosY - pos, curPosZ + j)].flags = 30;
+	    			}
+	    			
+	    			
+	    			q = 0;
+	    			while(q <= length_){
+	    				//particleBuffer[coordsToIndex(curPosX + i, curPosY-q, curPosZ + j)].flags = 30+length_;
+	    				particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing + i, 
+										 (particleBuffer[id.x].position.y-tilePos[1]) / spacing - q, 
+										 (particleBuffer[id.x].position.z-tilePos[2]) / spacing +j)
+						  ].flags = 30+length_;
+	    				
+	    				particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing + i, 
+										 (particleBuffer[id.x].position.y-tilePos[1]) / spacing - q, 
+										 (particleBuffer[id.x].position.z-tilePos[2]) / spacing +j)
+						  ].velocity = float3(99999, 99999, 99999);
+	    				q++;	 		
+	    			}							
+	    		}
+	    	}
+	    	
+		}
+	} else {
+		//if(currentPoint.flags >= 30){
+		if(particleBuffer[id.x].flags >= 30){
+			float3 highFreqPos = mul(particleBuffer[id.x].position, 8.0);
+			
+			float newNoise = snoise(float3(highFreqPos.x + randomSeed.x, highFreqPos.y + randomSeed.y, highFreqPos.z + randomSeed.z));
+			
+			if(newNoise > threshold){
+				newNoise *= -1;
+			}
+			
+			//currentPoint.prevNoise = newNoise;
+			particleBuffer[id.x].prevNoise = -1;
+				
+		}
+		
+		//particleBuffer[id.x] = currentPoint;
+		
+	}
+	    		
+}
+
+
+
+

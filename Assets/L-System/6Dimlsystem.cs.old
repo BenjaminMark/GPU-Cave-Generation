@@ -1,0 +1,440 @@
+
+using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+using System.Text;
+using System;
+using System.IO;
+
+public enum LRuleType{
+	room, tunnel
+	
+};
+
+public class lsystem : MonoBehaviour {
+	
+	public Transform blockContainer;
+	public GameObject block;
+	//public int scale;
+	//public int branchLength = 1;
+	public int spread = 1;
+	public int turnAngle = 30;
+	public int generations = 2;
+	public bool forceDrawLsystemTree = false;
+	public float slopeLimit = 1.0f;
+	public bool balancedMode = false;
+	public float balanceStep = 0.05f;
+	public bool targetMode = false;
+	public Vector3 target;
+	public float distanceWeight = 1;
+	public bool constraintBoxMode = false;
+	public Vector3 constraintBoxSize;
+	public bool constraintSphereMode = false;
+	public int constraintSphereRadius = 0;
+	public TextAsset rawRules;
+	//[HideInInspector]
+	//List<Vector3> lPoints;
+	public int displayOneEvery = 3;
+	private int gCount = 0;
+
+	private VoxelCubeManager particleComputer;
+	
+	public Action<Vector3> PipeOutThisPoint;// = DoNothing;
+	
+	// Use this for initialization
+	void Start () {
+		
+		//lPoints = new List<Vector3>();
+		
+		particleComputer = gameObject.GetComponent<VoxelCubeManager>();
+		if(particleComputer){
+			TileFactory.Start(particleComputer);
+			if(forceDrawLsystemTree)
+				PipeOutThisPoint = pipePtToBoth;
+			else
+				PipeOutThisPoint = pipePtToVoxelManager;
+		}
+		else{
+			PipeOutThisPoint = pipePtToWorld;
+		}
+		
+
+
+		/*
+		 * Legend:
+		 * C: Curve
+		 * F: Forward
+		 * L: Yaw CClockwise
+		 * R: Yaw Clockwise
+		 * +: Roll Clockwise
+		 * -: roll CClockwise
+		 * U: Pitch up
+		 * D: pitch down
+		 * [ and ]: Begin and end branch
+		 */
+		
+		/*
+		string ruleG1 = "-FG[C--FG-FG]-FFG[-FG--FG]";
+		string ruleG2 = "-+FG+FG+FGU[-DFG]-FG";
+		string ruleC = "-+G+++FG++FG+FG+FG+FFG+FFFG";
+		*/
+
+
+
+
+		//TODO: original is this one:
+		//string ruleG1 = "-FG[C--FUG-FG]-FFG[-FDG--FG]";
+		//string ruleG2 = "-+FG+FG+FGUU[-DFG]-FG";
+		//string ruleC = "+++FG++FUG+FG+FG+FFG+FFFDG";
+		
+		//string ruleG1 = "-FG[C--FUG-FG]-FFG[-FDG--FG]";
+		//string ruleG2 = "-FG[C--FUG-FG]-FFG[-FDG--FG]";
+		//string ruleC = "-FG[C--FUG-FG]-FFG[-FDG--FG]";
+		
+		//long up
+		//string ruleG1 = "-FG[-CCC-UUG-FG]-FUUG[-FUG--UG]UUUG";
+		//string ruleG2 = "-FG[-CCC-UUG-FG]-FUUG[-FUG--UG]UUUG";
+		//string ruleC = "-FG[-CCC-UUG-FG]-FUUG[-FUG--UG]UUUG";
+		//long down
+		//string ruleG1 = "+FG[+DDG]+DDG[+DG]DDD";
+		//string ruleG2 = "+FG[+DDG]+DDG[+DG]DDD";
+		//string ruleC = "+FG[+DDG]+DDG[+DG]DDD";
+		
+		//string ruleF = "F[-F]F[+F][F]";
+		//string ruleF = "F[-F-F+F]FF[+F+F-F][F]";
+		//string ruleF = "F[--F--F++F]FF[++F++F--F][+F]";
+		//string ruleF = "F[-UF-F+F]F+F[+F+FD-F][FD]";
+		
+		//tudor tries
+		//string ruleF = "+F-U[DFF-F-FU[+DF]]-D+F[[[+DFF]D-FU+D]D]FF[F+FF+UF]";
+		//string ruleF = "+F-U[DFF-F+F-FU[+DFF+++F]]-D+F[[[+DF---F]D-FU+D]D]-F+F[F+FDF+UUFF]";
+		//string ruleF = "+F-U-DF[[F+FDF+UUFFDDD][+F[+DF---FUUFUU]D-FU+D]D]F+F";
+
+		List<Symbol> symbolList =  loadRules(); 
+
+		#if UNITY_EDITOR
+		foreach(Symbol rule in symbolList){
+			Debug.Log(rule.symbol);
+			Debug.Log(rule.rules.Count);          
+        }
+		#endif
+
+		StringBuilder axiom = new StringBuilder("F");
+		float balanceWeight = 0.0f;
+		
+		for(int i = 0; i < generations; i++){
+
+			LPosition currentPos = new LPosition();
+			Stack<LPosition> savedPos = new Stack<LPosition>();
+
+			StringBuilder lastResult = axiom;
+			axiom = new StringBuilder();
+			
+			for(int j = 0; j < lastResult.Length; j++){
+
+				foreach(Symbol symbol in symbolList){ 
+					if(symbol.symbol != 'F'){
+					continue;
+					}
+
+					switch(lastResult[j]){
+					case '[':
+						savedPos.Push(currentPos);
+						break;
+					case ']':
+						currentPos = savedPos.Pop();
+						break;
+					default:
+						currentPos = calculateDirection(lastResult[j], currentPos);
+						break;
+					}
+
+
+					if(lastResult[j] != 'F'){
+						axiom.Append(lastResult[j]);
+						continue;
+					}
+
+					List<StochasticRule> stochasticRules = new List<StochasticRule>(); 
+					StochasticRule max = new StochasticRule();
+
+					foreach(LRule rule in symbol.rules){
+
+						float currentWeight = rule.weight;
+
+
+						/*
+						//Target Mode:
+						if(targetMode){
+							Vector3 normDir = rule.direction.normalized;
+
+							float curDist = Vector3.Distance(target, currentPos);
+							float newDist = Vector3.Distance(target, currentPos + normDir);
+
+							currentWeight += (curDist - newDist) * distanceWeight;
+						}
+
+						//Balanced mode. Is only going to work individually for each symbol.
+						//Tunnels increase the weight and rooms decrease it.
+						if(balancedMode){
+							if(rule.type == LRuleType.tunnel){
+								currentWeight += balanceWeight * -1.0f;
+							} else {
+								currentWeight += balanceWeight;
+							}
+						}
+						*/
+
+						StochasticRule tempRule = new StochasticRule();
+						tempRule.probability = UnityEngine.Random.value + currentWeight;
+						tempRule.rule = rule;
+						max = max.maxRule(tempRule);
+						stochasticRules.Add(tempRule);
+					}
+
+					/*
+					if(constraintBoxMode){
+						Vector3 newPos = currentPos+max.rule.direction;
+						if(Mathf.Abs(newPos.x) > constraintBoxSize.x ||
+						   		Mathf.Abs(newPos.y) > constraintBoxSize.y ||
+						   		Mathf.Abs(newPos.z) > constraintBoxSize.z){
+							continue;
+						}
+					}
+
+					if(constraintSphereMode){
+						Vector3 newPos = currentPos + max.rule.direction;
+
+						if(Vector3.Distance(newPos, Vector3.zero) > constraintSphereRadius){
+							continue;
+						}
+					}
+
+					if(balancedMode){
+						if(max.rule.type == LRuleType.tunnel){
+							balanceWeight += balanceStep;
+						} else if(max.rule.type == LRuleType.room){
+							balanceWeight -= balanceStep;
+						}
+						
+					}
+					*/
+					//currentPos += max.rule.direction;
+					axiom.Append(max.rule.rule);
+					break;
+				}
+			}
+		}
+		
+		//we should think about saving the lsystem and the noise seed(s) to a log file or smth. in case we want to recreate an instance
+		#if UNITY_EDITOR
+		print (axiom);
+		#endif
+
+
+		drawBranch(new LPosition(), 0,ref axiom);
+		
+		if(particleComputer){
+			//particleComputer.enabled = true;
+			//particleComputer.lPts = lPoints;
+			particleComputer.startComputeProcess();
+		}
+		
+	}
+	
+	// Update is called once per frame
+	void Update () {
+		
+	}
+	
+	
+	//todo: this needs to be implemented recursively with coroutines and without returns
+	// 		or, without recursions, with lists/stacks
+	//todo: http://answers.unity3d.com/questions/24640/how-do-i-return-a-value-from-a-coroutine.html
+	//TODO: actually no; we can just have it run in a separate thread, and populate the lPoints list, which will be shared by ParticleCube.cs
+	int drawBranch(LPosition pos, int lastIndex, ref StringBuilder axiom){
+		LPosition localPos = new LPosition();
+		localPos.pos = pos.pos;
+		localPos.rot = pos.rot;
+		int index = lastIndex;
+		
+		while(index < axiom.Length){
+			switch(axiom[index]){
+			case 'F':
+				Vector3 lastPos = localPos.pos;
+				localPos.pos += Quaternion.Euler(localPos.rot) * new Vector3(0, spread, 0);
+
+				localPos.pos = new Vector3(Mathf.Round(localPos.pos.x), Mathf.Round(localPos.pos.y), Mathf.Round(localPos.pos.z));
+
+				drawLine (lastPos, localPos.pos);
+
+				break;
+			case '[':
+				Debug.Log("Jump in");
+				Debug.Log(localPos.pos);
+				index = drawBranch(localPos, index+1,ref axiom);
+				Debug.Log(localPos.pos);
+				break;
+			case ']':
+				Debug.Log ("Jump Out");
+				Debug.Log (localPos.pos);
+				return index;
+				//break;
+			default:
+				localPos = calculateDirection(axiom[index], localPos);
+				break;
+			}
+			index++;
+		}
+		return 0;
+	}	
+	
+	void drawLine(Vector3 start, Vector3 end){
+		Vector3 point = start;
+		
+		Vector3 dist = end - start;
+		int N = (int)Mathf.Max(Mathf.Abs (dist.x), Mathf.Max (Mathf.Abs (dist.y), Mathf.Abs (dist.z)));
+		Vector3 step = dist / N;
+		
+		for (int i = 0; i < N; i++) {
+			point = point + step;
+			PipeOutThisPoint(point);
+		}
+	}
+
+	bool checkAngle(Vector3 dir){
+		
+		float xyDist = new Vector2(dir.x, dir.y).magnitude;
+
+		float slope = Mathf.Abs(dir.z / xyDist);
+
+		Debug.Log(slopeLimit);
+		Debug.Log(slope);
+		Debug.Log (slope <= slopeLimit);
+        
+        return slope <= slopeLimit;
+	}
+
+	private bool trimPoint(){
+		if(gCount % displayOneEvery == 0){
+			gCount++;
+			return true;
+		}
+		else{
+			gCount++;
+			return false;
+		}
+	}
+
+	private void pipePtToVoxelManager(Vector3 point){
+
+		if(trimPoint())
+			TileFactory.AddPointToATile(new Vector3(Mathf.Round(point.x), Mathf.Round(point.y), Mathf.Round(point.z)));
+		
+	}
+	
+	
+	private void pipePtToBoth(Vector3 point){
+
+		if(trimPoint())
+			TileFactory.AddPointToATile(new Vector3(Mathf.Round(point.x), Mathf.Round(point.y), Mathf.Round(point.z)));
+		
+		//float mod = -60;//28;
+		(Instantiate(block, new Vector3(point.x-30, point.z, point.y), Quaternion.identity) as GameObject).transform.parent = blockContainer;
+		//GameObject ob = Instantiate(block, new Vector3(point.x-30, point.z, point.y), Quaternion.identity) as GameObject;
+		//ob.transform.parent = blockContainer;
+		
+	}
+	
+	private void pipePtToWorld(Vector3 point){
+		//float mod = (stateManager.cubeSize/2)* stateManager.cubeSpacing;
+		float mod = 60;//28;
+		Instantiate(block, new Vector3(point.x+mod, point.z+mod, point.y), Quaternion.identity);
+	}
+
+	private LPosition calculateDirection(char symbol, LPosition curPos){ 
+		LPosition retVal = curPos;
+
+		switch(symbol){
+			case 'F':
+			retVal.pos += Quaternion.Euler(retVal.rot)*new Vector3(0, 0, spread);
+			break;
+			case 'L':
+			retVal.rot.y -= turnAngle;
+			break;
+			case 'R':
+			retVal.rot.y += turnAngle;
+			break;
+			case '+':
+			retVal.rot.z += turnAngle;
+			break;
+			case '-':
+			retVal.rot.z -= turnAngle;
+			break;
+			case 'U':
+			retVal.rot.x += turnAngle;
+			if(retVal.rot.x > slopeLimit){
+				retVal.rot.x = slopeLimit;
+			}
+			break;
+			case 'D':
+			retVal.rot.x -= turnAngle;
+			if(retVal.rot.x < -slopeLimit){
+				retVal.rot.x = -slopeLimit;
+			}
+			break;
+			default:
+			break;
+		}
+
+		return retVal;
+	}
+	
+	private List<Symbol> loadRules(){
+		List<Symbol> symbols = new List<Symbol>();
+		
+		
+		
+		String[] rawSplitRules = rawRules.text.Split(new String[] {"\n"}, StringSplitOptions.None);
+		
+		foreach(String rawRule in rawSplitRules){
+			
+			String[] splitRule = rawRule.Split(new String[] {";"}, StringSplitOptions.None);
+			LRule newRule = new LRule();
+			
+			//Syntax:
+			//Symbol;Rule;type;x;y;z;weight;
+			newRule.symbol = splitRule[0][0];
+			newRule.rule = splitRule[1];
+			newRule.type = (LRuleType)Enum.Parse(typeof(LRuleType), splitRule[2]);
+			try{
+				newRule.direction.x = Convert.ToInt32(splitRule[3]);
+				newRule.direction.y = Convert.ToInt32(splitRule[4]);
+				newRule.direction.z = Convert.ToInt32(splitRule[5]);
+				newRule.weight = Convert.ToSingle(splitRule[6]);
+			} catch (Exception e){
+				print(e.Message);
+				return null;
+			}
+			bool exists = false;
+
+			foreach(Symbol symbol in symbols){
+				if(symbol.symbol == newRule.symbol){
+					symbol.rules.Add(newRule);
+					exists = true;
+				}
+			}
+
+			if(!exists){
+				Symbol sym = new Symbol();
+				sym.symbol = newRule.symbol;
+				sym.rules.Add(newRule);
+				symbols.Add(sym);
+			}
+
+
+		}
+
+		return symbols;
+	}
+}

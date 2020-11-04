@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+	<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+	<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+	<ProductVersion>10.0.20506</ProductVersion>
+	<SchemaVersion>2.0</SchemaVersion>
+	<ProjectGuid>{BB216FF4-9CAB-0F47-0280-8DA9B2B5532F}</ProjectGuid>
+	<OutputType>Library</OutputType>
+	<AppDesignerFolder>Properties</AppDesignerFolder>
+	<RootNamespace></RootNamespace>
+	<AssemblyName>Assembly-CSharp-Editor</AssemblyName>
+	<TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+	<FileAlignment>512</FileAlignment>
+	<BaseDirectory>Assets</BaseDirectory>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+	<DebugSymbols>true</DebugSymbols>
+	<DebugType>full</DebugType>
+	<Optimize>false</Optimize>
+	<OutputPath>Temp\bin\Debug\</OutputPath>
+	<DefineConstants>DEBUG;TRACE;UNITY_WEBPLAYER;WEBPLUG;ENABLE_MICROPHONE;ENABLE_TEXTUREID_MAP;ENABLE_AUDIO_FMOD;ENABLE_MONO;ENABLE_SPRITES;ENABLE_TERRAIN;ENABLE_GENERICS;ENABLE_SUBSTANCE;INCLUDE_WP8SUPPORT;ENABLE_MOVIES;ENABLE_WWW;ENABLE_IMAGEEFFECTS;ENABLE_WEBCAM;INCLUDE_METROSUPPORT;RENDER_SOFTWARE_CURSOR;ENABLE_NETWORK;ENABLE_PHYSICS;ENABLE_CACHING;ENABLE_CLOTH;ENABLE_2D_PHYSICS;ENABLE_SHADOWS;ENABLE_AUDIO;ENABLE_NAVMESH_CARVING;ENABLE_DUCK_TYPING;ENABLE_SINGLE_INSTANCE_BUILD_SETTING;UNITY_4_3_1;UNITY_4_3;ENABLE_PROFILER;UNITY_EDITOR;UNITY_EDITOR_WIN;UNITY_TEAM_LICENSE</DefineConstants>
+	<ErrorReport>prompt</ErrorReport>
+	<WarningLevel>4</WarningLevel>
+	<NoWarn>0169</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+	<DebugType>pdbonly</DebugType>
+	<Optimize>true</Optimize>
+	<OutputPath>Temp\bin\Release\</OutputPath>
+	<DefineConstants>TRACE</DefineConstants>
+	<ErrorReport>prompt</ErrorReport>
+	<WarningLevel>4</WarningLevel>
+	<NoWarn>0169</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+	<Reference Include="System" />
+    <Reference Include="System.XML" />
+	<Reference Include="System.Core" />
+	<Reference Include="System.Xml.Linq" />
+	<Reference Include="UnityEngine">
+	  <HintPath>C:/Program Files (x86)/Unity_4.3.1f1/Editor/Data/Managed/UnityEngine.dll</HintPath>
+	</Reference>
+	<Reference Include="UnityEditor">
+	  <HintPath>C:/Program Files (x86)/Unity_4.3.1f1/Editor/Data/Managed/UnityEditor.dll</HintPath>
+	</Reference>
+  </ItemGroup>
+  <ItemGroup>
+     <Compile Include="Assets\Fluvio\Fluvio Example Project\Common\Water4\Editor\FluvioGerstnerDisplaceEditor.cs" />
+     <Compile Include="Assets\Fluvio\Fluvio Example Project\Common\Water4\Editor\FluvioPlanarReflectionEditor.cs" />
+     <Compile Include="Assets\Fluvio\Fluvio Example Project\Common\Water4\Editor\FluvioSpecularLightingEditor.cs" />
+     <Compile Include="Assets\Fluvio\Fluvio Example Project\Common\Water4\Editor\FluvioWaterBaseEditor.cs" />
+     <Compile Include="Assets\Fluvio\Fluvio Example Project\Common\Water4\Editor\FluvioWaterEditorUtility.cs" />
+     <None Include="Assets\Fluvio\Fluvio Example Project\Common\Water4\Sources\Shaders\FX-SimpleWater4.shader" />
+     <None Include="Assets\Standard Assets\Projectors\Guidelines.txt" />
+     <None Include="Assets\Fluvio\Fluvio Example Project\Common\Image Effects\_Sources\Shaders\FluvioTwirlEffect.shader" />
+     <None Include="Assets\Standard Assets\Toon Shading\Sources\Shaders\Toony-Basic.shader" />
+     <None Include="Assets\Fluvio\Fluvio Example Project\Unity-4.3.0\Scenes\Fluvio3DExample\BeastSettings.xml" />
+     <None Include="Assets\Standard Assets\Projectors\Sources\Shaders\Projector Multiply.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\4_newLandMarks.compute" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\(bak)simpleAutomaton.compute" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\4_landMarks.compute" />
+     <None Include="Assets\Fluvio\Fluvio Example Project\Common\Water4\Sources\Shaders\WaterInclude.cginc" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\particles_distort.compute" />
+     <None Include="Assets\Standard Assets\Shaders\noiseSimplexCompact.cginc" />
+     <None Include="Assets\VoxelCube\VoxelCubeShader.shader" />
+     <None Include="Assets\VoxelCube\DebugVoxelCubeShader 1.shader" />
+     <None Include="Assets\Standard Assets\Tessellation Shaders\BumpedSpecularSmooth.shader" />
+     <None Include="Assets\Standard Assets\Particles\Sources\Shaders\Particle Alpha Blend (Queue +100).shader" />
+     <None Include="Assets\Fluvio\_Main\Fluvio.Runtime.xml" />
+     <None Include="Assets\Standard Assets\Shaders\RC-1290 tessellation my mod.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\4_landMarks_simultaneous.compute" />
+     <None Include="Assets\Standard Assets\Shaders\OutlinedDiffuseNormals.shader" />
+     <None Include="Assets\Standard Assets\Skyboxes\_skybox info.txt" />
+     <None Include="Assets\L-System\rules.txt" />
+     <None Include="Assets\VoxelCube\DebugVoxelCubeShader.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\SimplexNoise\noise-simplex.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\4_landMarks_thin.compute" />
+     <None Include="Assets\Standard Assets\Shaders\GSMarchingCubes.shader" />
+     <None Include="Assets\Standard Assets\Shaders\OutlinedDiffuseNormalsCorrect.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\noiseSimplex.cginc" />
+     <None Include="Assets\Standard Assets\Shaders\CurlNoise.cginc" />
+     <None Include="Assets\VoxelCube\BakVoxelCubeShader 1.shader" />
+     <None Include="Assets\Standard Assets\Toon Shading\Sources\Shaders\Toony-BasicOutline.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\5_DisplayOnly.compute" />
+     <None Include="Assets\VoxelCube\CubeStates\1_MoveBrushToNextTile.compute" />
+     <None Include="Assets\Standard Assets\Shaders\OutlinedInvisibleCircle.shader" />
+     <None Include="Assets\Standard Assets\Shaders\OutlinedDiffuse3.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\4_newLandMarks 2.compute" />
+     <None Include="Assets\Standard Assets\Shaders\KyleHalladayBetterDiffuse.shader" />
+     <None Include="Assets\Fluvio\Fluvio Example Project\Common\Image Effects\_Sources\Shaders\FluvioFisheyeShader.shader" />
+     <None Include="Assets\Standard Assets\Shaders\BurningPaper.shader" />
+     <None Include="Assets\Standard Assets\Projectors\Sources\Shaders\Projector Light.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\4_landMarksTest.compute" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\1_loader.compute" />
+     <None Include="Assets\Fluvio\Fluvio Example Project\Common\Water4\Sources\Shaders\FX-Water4.shader" />
+     <None Include="Assets\Standard Assets\Shaders\ZeroResourceInvisible.shader" />
+     <None Include="Assets\Standard Assets\Toon Shading\Sources\Shaders\Toony-LightedOutline.shader" />
+     <None Include="Assets\Standard Assets\Toon Shading\Sources\Shaders\Toony-Lighted.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\3_smoothingAutomaton.compute" />
+     <None Include="Assets\VoxelCube\CubeStates\6_PP_Normals.compute" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\4_newLandMarks 1.compute" />
+     <None Include="Assets\VoxelCube\CubeStates\2_LoadAndNoise.compute" />
+     <None Include="Assets\Standard Assets\Shaders\OutlinedDiffuseNormalsBak.shader" />
+     <None Include="Assets\Standard Assets\Shaders\OutlinedDiffuseNormalsNoTess.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\3_caveAutomaton.compute" />
+     <None Include="Assets\Standard Assets\Shaders\BurningWall.shader" />
+     <None Include="Assets\Fluvio\Fluvio Example Project\Common\Water4\Sources\Shaders\FX-Water4Underwater.shader" />
+     <None Include="Assets\VoxelCube\CubeStates\backup ComputeShaders\3_simpleAutomaton.compute" />
+     <None Include="Assets\Standard Assets\Tessellation Shaders\BumpedSpecularDisplacement.shader" />
+     <None Include="Assets\Fluvio\Fluvio Example Project\Common\Projectors\Shaders\Projector Light.shader" />
+     <None Include="Assets\L-System\SimpleRules.txt" />
+ <Reference Include="UnityEditor.Graphs">
+ <HintPath>C:\Program Files (x86)\Unity_4.3.1f1\Editor\Data\Managed\UnityEditor.Graphs.dll</HintPath>
+ </Reference>
+ <Reference Include="UnityEditor.iOS.Extensions">
+ <HintPath>C:\Program Files (x86)\Unity_4.3.1f1\Editor\Data\PlaybackEngines\iPhonePlayer\EditorExtensions\UnityEditor.iOS.Extensions.dll</HintPath>
+ </Reference>
+ <Reference Include="UnityEditor.WP8.Extensions">
+ <HintPath>C:\Program Files (x86)\Unity_4.3.1f1\Editor\Data\PlaybackEngines\WP8Support\EditorExtensions\UnityEditor.WP8.Extensions.dll</HintPath>
+ </Reference>
+ <Reference Include="UnityEditor.Metro.Extensions">
+ <HintPath>C:\Program Files (x86)\Unity_4.3.1f1\Editor\Data\PlaybackEngines\MetroSupport\EditorExtensions\UnityEditor.Metro.Extensions.dll</HintPath>
+ </Reference>
+ <Reference Include="UnityEditor.BB10.Extensions">
+ <HintPath>C:\Program Files (x86)\Unity_4.3.1f1\Editor\Data\PlaybackEngines\BB10Player\EditorExtensions\UnityEditor.BB10.Extensions.dll</HintPath>
+ </Reference>
+ <Reference Include="UnityEditor.Android.Extensions">
+ <HintPath>C:\Program Files (x86)\Unity_4.3.1f1\Editor\Data\PlaybackEngines\AndroidPlayer\EditorExtensions\UnityEditor.Android.Extensions.dll</HintPath>
+ </Reference>
+ <Reference Include="Ionic.Zip.Reduced">
+ <HintPath>Assets\Fluvio\Editor\Ionic.Zip.Reduced.dll</HintPath>
+ </Reference>
+ <Reference Include="Fluvio.Runtime">
+ <HintPath>Assets\Fluvio\_Main\Fluvio.Runtime.dll</HintPath>
+ </Reference>
+ <Reference Include="Fluvio.Editor">
+ <HintPath>Assets\Fluvio\Editor\Fluvio.Editor.dll</HintPath>
+ </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="Assembly-CSharp-firstpass.csproj">
+      <Project>{E8590370-3B4E-8933-6892-C5F7AFC1D683}</Project>      <Name>Assembly-CSharp-firstpass</Name>    </ProjectReference>
+    <ProjectReference Include="Assembly-UnityScript-firstpass.unityproj">
+      <Project>{7A100CB3-C032-998E-9C44-B2D00080A055}</Project>      <Name>Assembly-UnityScript-firstpass</Name>    </ProjectReference>
+    <ProjectReference Include="Assembly-CSharp.csproj">
+      <Project>{DAB0D93A-E14F-407E-9F5C-ACF3DB4F1695}</Project>      <Name>Assembly-CSharp</Name>    </ProjectReference>
+    <ProjectReference Include="Assembly-UnityScript.unityproj">
+      <Project>{3435734A-9EF0-1266-AAB9-DADB6246A475}</Project>      <Name>Assembly-UnityScript</Name>    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+	   Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  
+</Project>

@@ -1,0 +1,713 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel landMarks
+#include "noiseSimplex.cginc"
+
+struct VoxelParticle
+{
+	float3 position;
+	float3 velocity;
+	float noise;
+	float prevNoise;
+	int flags;// 1 = anchor top, -1 = anchor bottom
+};
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWStructuredBuffer<VoxelParticle> particleBuffer;
+
+// parameters from GPU
+//float deltaTime;									
+//float3 target;										// Mouse position.
+//int targetChanged;
+//float targetStrengh;								
+//float sprayOrbRadius;
+float spacing;
+int cubeSize;
+float3 tilePos;
+int frameNumber;
+//int frameTotal;
+//int seedMod;
+float3 randomSeed;
+
+//TODO: end-user tweakable variables. To expose to inspector and eventually to scene. 
+float rangeModulator; //this maps to stalactitePopulation in the inspector. 9.4 is around the highest to go for few stalactites (almost none). 
+float attachmentPointDensity;
+float stalactiteStraightness;
+float fineTuneThickness;
+float maxStHeight;
+int stthick;
+float hooWobbliness;
+
+//	https://stackoverflow.com/questions/7367770/how-to-flatten-or-index-3d-array-in-1d-array
+//			reverse: https://stackoverflow.com/questions/14845084/how-do-i-convert-a-1d-index-into-a-3d-index?rq=1
+int coordsToIndex(int x, int y,int z){
+	//Flat[x + WIDTH * (y + DEPTH * z)] = Original[x, y, z]
+	//return x + cubeSize * (y + cubeSize * z);
+	return x + (cubeSize) * (z + (cubeSize) * y);
+
+}
+/*
+float hash( float n )
+{
+    return frac(sin(n)*43758.5453);
+}
+float snoise( float3 x )
+{
+    // The noise function returns a value in the range -1.0f -> 1.0f
+
+	//x = abs(x);
+
+    float3 p = floor(x);
+    float3 f = frac(x);
+
+    f       = f*f*(3.0-2.0*f);
+    float n = p.x + p.y*57.0 + 113.0*p.z;
+
+    float res = lerp(lerp(lerp( hash(n+0.0), hash(n+1.0),f.x),
+                   lerp( hash(n+57.0), hash(n+58.0),f.x),f.y),
+               lerp(lerp( hash(n+113.0), hash(n+114.0),f.x),
+                   lerp( hash(n+170.0), hash(n+171.0),f.x),f.y),f.z);
+    return (res-1)*2;
+}*/
+
+[numthreads(32,1,1)]
+void landMarks (int3 id : SV_DispatchThreadID)
+{
+	
+	
+	int distTop = 0;
+	int distBot = 0;
+	int topOffset = 1;
+	int botOffset = 1;
+
+	float zeroThresh = 0.0;					
+	float solidThresh = -attachmentPointDensity;//-0.5;//-0.1;
+	float airThresh = attachmentPointDensity;//0.5;//0.1;
+	int failsafeIterMax = 200;
+	
+	int3 thisPtId = int3( // tested this structure and it seems to work.
+						 (particleBuffer[id.x].position.x-tilePos[0]) / spacing, 
+						 (particleBuffer[id.x].position.y-tilePos[1]) / spacing,
+						 (particleBuffer[id.x].position.z-tilePos[2]) / spacing
+						);// I guess the problem was storing the particleBuffer[id.x] point in a "VoxelParticle currentPoint"
+
+	
+	//if(frameNumber % 2 == 1){ //particleBuffer[id.x].noise = particleBuffer[id.x].prevNoise;
+	if(frameNumber == 1){
+		int thisFlag = particleBuffer[id.x].flags;
+		int thisFlagHalf = abs(thisFlag);//*0.6);<-handled downstairs
+		//todo: don't think I require prevnoise. it's not automata, and joining neighbours should be the same regardless
+		//	Fill this with noise but also with flags. (noise goes thick to thin, but also columnThicknessFINE)
+		//	Starting next frame, you expand by copying this noise.
+		//	final frame, you bland out the surrounding air.
+		if(thisFlag > 2 + stthick*2){// && thisFlag) < 100){
+			for(int i = 0; i < thisFlagHalf; i++){
+				int index = coordsToIndex(thisPtId.x, thisPtId.y - i, thisPtId.z);
+				
+				float origNoise = -abs(particleBuffer[index].noise);
+				if(particleBuffer[index].noise<0 && i > 3){
+					
+					particleBuffer[index].noise += -1 
+							  					+ (i+0.4)/thisFlagHalf;//snoise(float3(particleBuffer[id.x].position.x + randomSeed.x, particleBuffer[id.x].position.y /*TODO*/-i + randomSeed.y, particleBuffer[id.x].position.z + randomSeed.z));
+				}
+				else{
+					particleBuffer[index].noise = -1 
+							  					+ (i+0.4)/thisFlagHalf;
+				}	
+				particleBuffer[index].noise = particleBuffer[index].noise *(1-hooWobbliness) + origNoise * hooWobbliness;	
+						
+				//particleBuffer[index].noise = -1;
+						
+				//if(i>1)
+				//particleBuffer[index].flags = 123;
+				if(stthick != 0){
+					particleBuffer[index].flags = i;
+					particleBuffer[index].velocity.x = thisFlagHalf;
+				}
+				else{
+					particleBuffer[index].flags = 123;
+				}
+				
+			}
+		}
+		else
+		if(thisFlag < -2 - stthick*2){ //TODO: maybe make stalagmites slightly thicker
+			for(int i = 0; i < thisFlagHalf; i++){
+				int index = coordsToIndex(thisPtId.x, thisPtId.y + i, thisPtId.z);
+				
+				float origNoise = -abs(particleBuffer[index].noise);
+				if(particleBuffer[index].noise<0 && i > 3){
+					particleBuffer[index].noise += -1 
+							  					+ (i+0.4)/thisFlagHalf;//snoise(float3(particleBuffer[id.x].position.x + randomSeed.x, particleBuffer[id.x].position.y /*TODO*/-i + randomSeed.y, particleBuffer[id.x].position.z + randomSeed.z));
+				}
+				else{
+					particleBuffer[index].noise = -1 
+							  					+ (i+0.4)/thisFlagHalf;
+				}
+				particleBuffer[index].noise = particleBuffer[index].noise *(1-hooWobbliness) + origNoise * hooWobbliness;	
+				
+				//particleBuffer[index].noise = -1;
+				
+				//if(i>1)
+				//particleBuffer[index].flags = 123;
+				if(stthick != 0){
+					particleBuffer[index].flags = i;
+					particleBuffer[index].velocity.x = thisFlagHalf;
+				}
+				else{
+					particleBuffer[index].flags = 123;
+				}
+			}
+		}
+		else{
+			particleBuffer[id.x].flags = 0;
+			particleBuffer[id.x].velocity.x = 0;
+		}
+		
+		
+		//return;
+	}
+	else//Thicken the stalactites
+	if(frameNumber == 2 && stthick != 0){
+		int thisFlag = particleBuffer[id.x].flags;
+		//int stthick = 1;
+		if(particleBuffer[id.x].noise > zeroThresh){
+			bool br = false;
+			int xi=1;
+			int zj=1;
+			/*
+			if(particleBuffer[id.x].noise > 0.6){
+				xi=0;
+			}
+			else if(particleBuffer[id.x].noise < 0.4){
+				zj=0;
+			}else{
+				xi=0;
+				zj=0;
+			}
+			*/
+			for(xi=0; xi<=stthick; xi++){
+				for(zj=0; zj<=stthick; zj++){
+					int indx = coordsToIndex(thisPtId.x + xi, thisPtId.y, thisPtId.z +zj);	
+					if((xi != 0 || zj != 0) && particleBuffer[indx].flags != 0 && particleBuffer[indx].flags <120){	
+						float origNoise = -abs(particleBuffer[id.x].noise);
+						particleBuffer[id.x].noise = -1 + (particleBuffer[indx].flags)/particleBuffer[indx].velocity.x;// + max(xi, zj)/2;
+						particleBuffer[id.x].noise = particleBuffer[id.x].noise *(1-hooWobbliness) + origNoise * hooWobbliness;
+						particleBuffer[id.x].noise /=2;//todo controllable?
+						if(particleBuffer[id.x].noise >= zeroThresh){
+							//particleBuffer[id.x].noise = -particleBuffer[id.x].noise - 0.2;//0.02;
+							//particleBuffer[id.x].noise = -1;
+							particleBuffer[id.x].noise = zeroThresh - 0.02;//0.02;
+						}
+						particleBuffer[id.x].flags = 123;
+						br = true;
+						break;
+					}
+					else{
+						//: this is a major fcking bug with how hlsl is compiled and for loops unwrapped or noodles knows what else. IF you don't add an Else here, in which you access particleBuffer, the "particleBuffer[indx].flags" from the IF from above always evaluates as true... Don't believe me? go ahead and try. Compare flags with any value, set it to any value, it's always true.
+						particleBuffer[id.x].prevNoise = 0;//particleBuffer[id.x].noise;
+					}
+
+				}
+				if(br)
+					break;
+			}
+		}
+	}
+	else
+	if(frameNumber == -10){// This is the last frame; labeled -10 by the S4 c# script.
+	//this part now creates noise around the stalactites
+		//and then it smoothes it
+		
+		if(particleBuffer[id.x].flags != 123 && particleBuffer[id.x].noise > zeroThresh){
+			bool br = false;
+			for(int xi=-1; xi<=1; xi++){
+				for(int zj=-1; zj<=1; zj++){
+					int indx = coordsToIndex(thisPtId.x + xi, thisPtId.y, thisPtId.z +zj);	
+					if((xi != 0 || zj != 0) && particleBuffer[indx].flags == 123){	
+						//making empty space be closer to 1, makes the stalactite more straight. Make it closer to 0 and it attracts it towards it.
+						if(particleBuffer[id.x].noise>0){
+							particleBuffer[id.x].noise = snoise(float3((particleBuffer[id.x].position.x+randomSeed.x)/10,
+																		(particleBuffer[id.x].position.y+randomSeed.y)/10,
+																		(particleBuffer[id.x].position.z+randomSeed.z)/10
+							));
+						
+						particleBuffer[id.x].noise = fineTuneThickness - particleBuffer[id.x].noise/stalactiteStraightness;
+						
+						
+						
+						if(particleBuffer[id.x].noise <= zeroThresh){
+							//particleBuffer[id.x].noise = -particleBuffer[id.x].noise + 0.2;//0.02
+							//particleBuffer[id.x].noise = 1;
+							particleBuffer[id.x].noise = zeroThresh + 0.02;//0.02
+						}
+						
+						}
+						
+						br = true; 
+						break;
+					}
+					else{
+						//particleBuffer[id.x].noise = -1;
+						//TODO: this is a major fcking bug with how hlsl is compiled and for loops unwrapped or noodles knows what else. IF you don't add an Else here, in which you access particleBuffer, the "particleBuffer[indx].flags" from the IF from above always evaluates as true... Don't believe me? go ahead and try. Compare flags with any value, set it to any value, it's always true.
+						particleBuffer[id.x].prevNoise = 0;//particleBuffer[id.x].noise;
+					}
+					
+					
+				}
+				if(br)
+					break;
+			}
+		}
+	}
+	/*
+	if(frameNumber == -10){ // This is the last frame; labeled -10 by the S4 c# script.
+		//This part smooths out the AIR around the stalactites, to make them more straight~!
+		//int index;
+		if(particleBuffer[id.x].flags != 123 && particleBuffer[id.x].noise > zeroThresh){
+			bool br = false;
+			for(int xi=-1; xi<=1; xi++){
+				for(int zj=-1; zj<=1; zj++){
+					int indx = coordsToIndex(thisPtId.x + xi, thisPtId.y, thisPtId.z +zj);	
+					if((xi != 0 || zj != 0) && particleBuffer[indx].flags == 123){	
+						//making empty space be closer to 1, makes the stalactite more straight. Make it closer to 0 and it attracts it towards it.
+						
+						
+						particleBuffer[id.x].noise = fineTuneThickness - particleBuffer[id.x].noise/stalactiteStraightness;
+						//if(particleBuffer[id.x].noise <= zeroThresh)
+						//	particleBuffer[id.x].noise = zeroThresh + 0.02;
+						br = true;
+						break;
+					}
+					else{
+						//particleBuffer[id.x].noise = -1;
+						//TODO: this is a major fcking bug with how hlsl is compiled and for loops unwrapped or noodles knows what else. IF you don't add an Else here, in which you access particleBuffer, the "particleBuffer[indx].flags" from the IF from above always evaluates as true... Don't believe me? go ahead and try. Compare flags with any value, set it to any value, it's always true.
+						particleBuffer[id.x].prevNoise = 0;//particleBuffer[id.x].noise;
+					}
+
+				}
+				if(br)
+					break;
+			}
+		}
+		
+
+		//return;
+	}*/
+	else
+	if(frameNumber == 0 ){
+		//we kinda have no choice but to flush all remnants of flags from the other compute shaders. since we store intervals here now.	
+		particleBuffer[id.x].flags = 0;
+		//TODO: keep that one flag that says what you should never fill. or just save it as noise and prevnoise
+		
+		float noise10 = snoise(float3((particleBuffer[id.x].position.x+randomSeed.x)/20,
+							(particleBuffer[id.x].position.y+randomSeed.y)/20,
+							(particleBuffer[id.x].position.z+randomSeed.z)/20
+							));
+		//float3 lowFreqPoint = particleBuffer[id.x].position ;// * freqModulator; //actually, can't use this here at all 
+		//float freq = 50;//999999;//9;//9;//80000000;
+		//float lowFreqNoise = snoise(float3((lowFreqPoint.x + randomSeed.x)/freq, (lowFreqPoint.y + randomSeed.y)/freq, (lowFreqPoint.z + randomSeed.z)/freq));
+		if(noise10 > rangeModulator){// && lowFreqNoise < - rangeModulator){	
+		//if(particleBuffer[id.x].noise > zeroThresh){
+			
+			
+			if(snoise(float3((particleBuffer[id.x].position.x+randomSeed.x)/10,
+							(particleBuffer[id.x].position.y+randomSeed.y)/10,
+							(particleBuffer[id.x].position.z+randomSeed.z)/10
+							)) < 0.85){
+				return;
+			}
+			
+			//if(particleBuffer[id.x].noise < zeroThresh){
+			//	return;
+			//}
+			
+			//float anchorlimit = -0.94;//-0.75; //TODO: NOTE: THIS IS IMPORTANT: In our low octave noise lookup. If we sample a gradient (-1, -0.75) we will possibly get many stalactites spawned in the same-ish region. Think about what the blurry gradient looks like. And we don't want to search a 5x5x5 radius for spawned stalactites around the current one, for each thread...
+									
+
+			 /*
+			float3 lowFreqPoint = particleBuffer[id.x].position ;// * freqModulator; //actually, can't use this here at all 
+			//TODO: NOTE: Can't use random seed here in a conventional fashion. the freqModulator only works if it scales the values in the same (very low <0.9) range. So if the randomSeed is 8000, and your randomSeed is 0.2, it won't be correct (I tried)
+			//lowFreqPoint.x = (particleBuffer[id.x].position.x * freqModulator + randomSeed.x);
+			//lowFreqPoint.y = (particleBuffer[id.x].position.y * freqModulator + randomSeed.y);
+			//lowFreqPoint.z = (particleBuffer[id.x].position.z * freqModulator + randomSeed.z);
+
+			float rand = randomSeed.x / 999999;//9;//9;//80000000;
+			float lowFreqNoise = snoise(float3(lowFreqPoint.x + rand, lowFreqPoint.y + rand, lowFreqPoint.z + rand));
+			//if(lowFreqNoise > rangeModulator){
+			if(lowFreqNoise > rangeModulator){// && lowFreqNoise < - rangeModulator){
+				return;
+			}
+			*/	
+				
+			//TODO: Planning /TODO
+			//  pick random point in mid air, trace up and down. 
+			
+			//	either make a column, or a stalactite/stalacmite coupled with stalagmite/stalactite when tiles allow, 
+			//  or a HOODOO from below, with no stalactite above. -- How about a slider that makes a stalactite become a hoodoo? progressing to thicker instead of thinner?
+			//  Also, nice to have: Arches! --with curl noise?
+			//  -how to decide/pick between these? have a range. -0.8 and below for stalactites, -0.5 <-> -0.7 hoodoos, -0.5 <-> -0.3 columns
+			// 	expose these intervals as variable ranges in the inspector. a vector4: -1(-0.8, -0.7, -0.5, -0.3)0
+			//
+			//: must make sure that when you are crawling up or down, if you hit empty wall, stop and don't create stalactite
+			//			-also while building them, if you go off the edge, end with empty space and make previous have like a gradient
+			//: never create a spawnpoint near the edge of a cube.
+			//		stalactites must also have a minimum distance to the wall.
+			//: how to figure out the length of stalactites?
+			//			1 always stop when you hit a solid block or edge of cube. Must lookahead or behind? (to make sharp)
+			//			2 How about: save pos of the opposite end (flag or end of cube), calc length. -> thinness (exponential, or start late)
+			//				PROBLEM: lots of them wont have an opposite end, nor a cube end. (roughness)
+			//			-no choice: do one for loop until you hit some class of obstacle. then decide on length,
+			//						then do another for loop and actually build.
+			//			3 how to decide if it connects or not? Anchor holds length to centre or to cubewall. Take the noise value of the first subsequent point. The interval of noise scales the length (downward).
+			//: how to make them thinner? with control? Must be based on length. SO must know length ahead of time, or after the fact if you crawl backwards.
+			//: To sanitize the stalactites, make the air noise around the (sides NOT TOP of the) stalactites blander.
+			//	-stalactite stiffness slider: how bland the air around the stalactite is.
+			//	-stalactite thickness FINE: after applying blandness, how close to full is the space around the stalactite.
+			//		-limitation 1: stalactites will be 3x3 thick tops. And when they are 3x3x3, there is no more stiffness control
+			//		-limitation 2: (less important) stalactite stiffness will always be 1 voxel of influence around the core. so if the core would be super thick, say 10x10x10, a 1 voxel influence on the surface may not be nearly enough.
+			// Problem: the chance to anchor to a hard place sevearly diminishes the chance for stalactites and mites to meet.
+			//				solved with (notDenseDown + notDenseUp) < 1. 
+			
+			//TODO: NOTE: there are slight differences between what I planned ^ and how it turned out it needs to be....
+			
+			//if(currentPoint.position.x % 7 ==0 && currentPoint.position.y%7 ==0 && currentPoint.position.z%7 ==0)
+			//	particleBuffer[coordsToIndex(curPosX, curPosY, curPosZ)].prevNoise = -1;
+			
+			int closenessToEdge = 4 + stthick*2;//TODO must be relative to thickness of column
+									//TODO must be also relative to thickness of hoodoo (which is thicker)
+			
+			bool canBreakUp = false;
+			bool canBreakDown = false;
+			int notDenseUp = 0;
+			int notDenseDown = 0;
+			
+			int yOfBottomLimit = -1;
+			int yOfTopLimit = -1;
+			int indexOfUpAnchor = -1;
+			int indexOfDownAnchor = -1;
+			int indexUp;// = coordsToIndex(thisPtId.x, thisPtId.y, thisPtId.z);
+			int indexDown;// = coordsToIndex(thisPtId.x, thisPtId.y, thisPtId.z);
+			
+			//don't create anything if we are close to the tile's edge.
+			if(thisPtId.x < closenessToEdge || thisPtId.z < closenessToEdge ||
+			   thisPtId.x > cubeSize - closenessToEdge || thisPtId.z > cubeSize - closenessToEdge
+			){ return; }
+				
+			for(int i = 0; i < failsafeIterMax; i++){
+				indexUp = coordsToIndex(thisPtId.x, thisPtId.y + i, thisPtId.z);
+				indexDown = coordsToIndex(thisPtId.x, thisPtId.y - i, thisPtId.z);
+				
+				//don't create anything if we are close to the tile's edge.
+				//if(indexUp.y <= 1 || indexUp.y >= cubeSize-2){
+				if(!canBreakUp && thisPtId.y + i >= cubeSize-(2+ stthick*2)){
+				   yOfTopLimit = thisPtId.y + i;
+				   canBreakUp = true;
+				}
+				//if(indexDown.y <= 0 || indexDown.y >= cubeSize - 2){
+				if(!canBreakDown && thisPtId.y - i <= 1 + stthick*2){
+					yOfBottomLimit = thisPtId.y - i;
+					canBreakDown = true;
+				}
+				
+				if( !canBreakUp &&
+					particleBuffer[indexUp] //GOING UP
+							     .noise < solidThresh ){
+				
+					particleBuffer[indexUp].flags = 1;
+					indexOfUpAnchor = thisPtId.y + i;
+					canBreakUp = true;
+					//yOfTopLimit = thisPtId.y + i;
+				}
+				else if(notDenseUp==0 &&
+					particleBuffer[indexUp].noise < zeroThresh){
+					//canBreakUp = true;
+					notDenseUp++;
+					indexOfUpAnchor = thisPtId.y + i;
+				}
+				
+				
+				if( !canBreakDown &&
+					particleBuffer[indexDown] //GOING DOWN
+							     .noise < solidThresh ){
+				
+					particleBuffer[indexDown].flags = -1;
+					indexOfDownAnchor = thisPtId.y - i;
+					canBreakDown = true;
+					//yOfBottomLimit = thisPtId.y - i;
+				}
+				else if(notDenseDown==0 &&
+					particleBuffer[indexDown].noise < zeroThresh){
+					//canBreakDown = true;
+					notDenseDown++;
+					indexOfDownAnchor = thisPtId.y - i;
+				}
+			
+				//: if you want to decrease the number of stalactites that spawn without a matching mite, flush the flags before the break
+				if(canBreakUp && canBreakDown){
+					if((notDenseUp + notDenseDown) > 1){
+						particleBuffer[indexUp].flags == 0;
+						particleBuffer[indexDown].flags == 0;
+					}
+					break;
+				}
+				else if((notDenseUp + notDenseDown) > 1){
+					particleBuffer[indexUp].flags == 0;
+					particleBuffer[indexDown].flags == 0;
+					break;
+				}
+			}
+			
+			indexUp = coordsToIndex(thisPtId.x, indexOfUpAnchor, thisPtId.z);
+			indexDown = coordsToIndex(thisPtId.x, indexOfDownAnchor, thisPtId.z);
+			float coinThresh = 0.3;
+			float coinThreshUp = 0.8;
+			//store in each anchor point, what its max allowed travel distance can be.
+			if(particleBuffer[indexUp].flags == 1){
+				//float coin = abs(particleBuffer[coordsToIndex(thisPtId.x, indexOfUpAnchor-2, thisPtId.z)].noise)*0.45+0.5;	
+				float coin = abs(particleBuffer[coordsToIndex(thisPtId.x, indexOfUpAnchor-2, thisPtId.z)].noise);	
+				float test = abs(particleBuffer[coordsToIndex(thisPtId.x, indexOfUpAnchor-5, thisPtId.z)].noise);	
+				if(test > 0.35 && test<coin){
+					coin = test;
+				}
+				else{
+					test = coin;
+				}
+				
+				coin *= maxStHeight;
+				coin = coin*0.55 + 0.4;
+				
+				if(yOfBottomLimit > -1){
+					particleBuffer[indexUp].flags *= indexOfUpAnchor - yOfBottomLimit;
+					
+					//particleBuffer[indexUp].flags *=0.5;
+					particleBuffer[indexUp].flags *=coin;
+					
+					
+				} else{
+					particleBuffer[indexUp].flags *= indexOfUpAnchor - indexOfDownAnchor;
+
+					if(coin < 0.5){//larger chance to make a column if we have a stalactite above or below us
+						particleBuffer[indexUp].flags *= 0.6;//0.6
+					}
+					else{//NOTE: this can also make a column. if coin is large, and the coin of the guy above is also large.
+						particleBuffer[indexUp].flags *=coin;
+						
+					}
+				}
+				//if(particleBuffer[indexUp].flags <= 1){
+				//	particleBuffer[indexUp].flags = 0;
+				//}
+			}
+			//else{
+			//	particleBuffer[indexUp].flags = 0;
+			//}
+			
+			if(particleBuffer[indexDown].flags == -1){
+				float rnd = randomSeed.y;
+				float noise = snoise(float3(thisPtId.x * rnd, (indexOfDownAnchor*20) * rnd, thisPtId.z * rnd));
+
+				float coin = abs(particleBuffer[coordsToIndex(thisPtId.x, indexOfDownAnchor+5, thisPtId.z)].noise);	
+
+				if((noise > 0.3 || coin > 0.54) && noise<coin){
+					coin = noise;
+				}
+				else{
+					noise = coin; 
+				}
+				coin *= maxStHeight*0.8;
+				coin = coin*0.55 + 0.3;
+				
+				
+				if(yOfTopLimit > -1){
+					particleBuffer[indexDown].flags *= yOfTopLimit - indexOfDownAnchor;
+					
+					//particleBuffer[indexDown].flags *=0.5;
+					if(uint(coin*10) %2 >0){//%0% less chance to make a bottom stalacmite without a stalactite
+						particleBuffer[indexDown].flags = 0;
+					}
+					else{
+						particleBuffer[indexDown].flags *=coin;
+					}
+					
+					
+				} else{
+					particleBuffer[indexDown].flags *= indexOfUpAnchor - indexOfDownAnchor;
+					
+					
+					if(particleBuffer[indexUp].flags > 0.6 ){//coin < 0.35){//larger chance to make a column
+						particleBuffer[indexDown].flags *= 0.7;//0.6
+					}
+					else{//NOTE: this can also make a column. if coin is large, and the coin of the guy above is also large.
+						particleBuffer[indexDown].flags *=coin;
+
+					}
+					
+				}
+				//particleBuffer[indexDown].flags = -9;
+				//THIS WAS THE PROBLEM
+				/*
+				if(particleBuffer[indexDown].flags >= -1 || yOfBottomLimit > -1){
+					particleBuffer[indexDown].flags = 0;
+				}
+				else{
+					particleBuffer[indexDown].prevNoise = 0;
+				}*/
+				//if(particleBuffer[indexDown].flags >= -1){
+				//	particleBuffer[indexDown].flags = 0;
+				//}
+			}
+			//else{
+			//	particleBuffer[indexUp].flags = 0;
+			//}
+			
+
+
+
+			//particleBuffer[indexDown].flags =-5;
+			//particleBuffer[indexUp].flags =5;
+
+
+
+
+
+			/*
+			for(int i = 0; i < 10; i++){
+			
+				particleBuffer[coordsToIndex(thisPtId.x, 
+											 thisPtId.y - i, 
+											 thisPtId.z)
+							  ].prevNoise = lowFreqNoise; 
+				
+				particleBuffer[coordsToIndex(thisPtId.x, 
+											 thisPtId.y - i, 
+											 thisPtId.z)
+							  ].flags = 1; 	  
+				  
+				//particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing, 
+				//							 (particleBuffer[id.x].position.y-tilePos[1]) / spacing - i, 
+				//							 (particleBuffer[id.x].position.z-tilePos[2]) / spacing)
+				//			  ].prevNoise = lowFreqNoise; 
+				
+			}
+			*/
+				
+			
+		
+		
+		
+
+			/*
+			
+			VoxelParticle tempPoint;
+			int sumDownNeighbors = 0;
+			int sumUpNeighbors = 0;
+			//Down
+			for(int x = -1; x <=1; x++){
+				for(int z = -1; z <= 1; z++){
+					for(int y = 1; y < 3; y++){
+					//tempPoint = particleBuffer[coordsToIndex(curPosX + x,
+		    		//									 	 curPosY - y, 
+		    		//									 	 curPosZ + z)];
+		    		tempPoint = particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing, 
+											 (particleBuffer[id.x].position.y-tilePos[1]) / spacing, 
+											 (particleBuffer[id.x].position.z-tilePos[2]) / spacing)
+							  ];									 	 
+		    		if(tempPoint.noise > zeroThresh){
+		    			sumDownNeighbors++;
+		    		}
+		    	}							 			 
+				}
+			}
+		
+			//up
+			for(int i = -1; i <=1; i++){
+				for(int j = -1; j <= 1; j++){
+					//tempPoint = particleBuffer[coordsToIndex(curPosX + i,
+		    		//									 	 curPosY + 1, 
+		    		//									 	 curPosZ + j)];
+		    		tempPoint = particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing + i, 
+											 (particleBuffer[id.x].position.y-tilePos[1]) / spacing +1, 
+											 (particleBuffer[id.x].position.z-tilePos[2]) / spacing + j)
+							  ];
+		    		if(tempPoint.noise > zeroThresh){
+		    			sumUpNeighbors++;
+		    		}							 			 
+				}
+			}
+			
+			if((sumDownNeighbors >=  7)){// && sumUpNeighbors <= 4  )){
+				 //Makes an anchor point.
+				 
+				 
+				 
+				 for(int i = 0; i <= 1; i++){
+		    		for(int j = 0; j <= 1; j++){
+		    			int q = 0;
+		    			int length_ = 0;
+		    			int pos = 1;
+		    			
+		    			
+		    			//tempPoint = particleBuffer[coordsToIndex(curPosX + i,
+		    			//								 	 curPosY - pos, 
+		    			//								 	 curPosZ + j)];
+		    			tempPoint = particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing + i, 
+											 (particleBuffer[id.x].position.y-tilePos[1]) / spacing - pos, 
+											 (particleBuffer[id.x].position.z-tilePos[2]) / spacing + j)
+							  ];
+		    			while(tempPoint.noise > zeroThresh){
+		    				length_++;
+		    				pos++;
+		    				//tempPoint = particleBuffer[coordsToIndex(curPosX + i, curPosY - pos, curPosZ + j)];
+		    				tempPoint = particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing + i, 
+											 (particleBuffer[id.x].position.y-tilePos[1]) / spacing - pos, 
+											 (particleBuffer[id.x].position.z-tilePos[2]) / spacing + j)
+							  ];
+		    				//particleBuffer[coordsToIndex(curPosX + i, curPosY - pos, curPosZ + j)].flags = 30;
+		    			}
+		    			
+		    			
+		    			q = 0;
+		    			while(q <= length_){
+		    				//particleBuffer[coordsToIndex(curPosX + i, curPosY-q, curPosZ + j)].flags = 30+length_;
+		    				particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing + i, 
+											 (particleBuffer[id.x].position.y-tilePos[1]) / spacing - q, 
+											 (particleBuffer[id.x].position.z-tilePos[2]) / spacing +j)
+							  ].flags = 30+length_;
+		    				
+		    				particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing + i, 
+											 (particleBuffer[id.x].position.y-tilePos[1]) / spacing - q, 
+											 (particleBuffer[id.x].position.z-tilePos[2]) / spacing +j)
+							  ].velocity = float3(99999, 99999, 99999);
+		    				q++;	 		
+		    			}							
+		    		}
+		    	}
+		    	
+			}
+		} else {
+			//if(currentPoint.flags >= 30){
+			if(particleBuffer[id.x].flags >= 30){
+				float3 highFreqPos = mul(particleBuffer[id.x].position, 8.0);
+				
+				float newNoise = snoise(float3(highFreqPos.x + randomSeed.x, highFreqPos.y + randomSeed.y, highFreqPos.z + randomSeed.z));
+				
+				if(newNoise > zeroThresh){
+					newNoise *= -1;
+				}
+				
+				//currentPoint.prevNoise = newNoise;
+				particleBuffer[id.x].prevNoise = -1;
+					
+			}
+			
+			//particleBuffer[id.x] = currentPoint;
+			
+		}*/
+		}
+	}   		
+}
+
+
+
+

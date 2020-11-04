@@ -1,0 +1,63 @@
+#pragma kernel main
+
+//TODO: NOTE: to syntax highlight this stuff: http://forum.unity3d.com/threads/164982-MonoDevelop-Syntax-Highlighting-for-compute-shaders?p=1127569
+
+// The same particle data structure used by both the compute shader and the shader.
+struct VoxelParticle
+{
+	float3 position;
+	float3 velocity;
+	float noise;
+	int flags;
+	//float3 cubeVerts[8];
+};
+
+// The buffer holding the particles shared with the regular shader.
+RWStructuredBuffer<VoxelParticle> particleBuffer;
+//float3 cubed_verts[8];
+
+// parameters from GPU
+float deltaTime;									// Even here deltaTime is needed!
+float3 target;										// Mouse position.
+int targetChanged;
+float targetStrengh;								// Strengh, from the inspector!
+//float isMoveActive;
+//float isSprayOnly;
+float sprayOrbRadius;
+float3 lPoint;
+
+[numthreads(32,1,1)] 								// 32 is the minimal size to fullfill the wrap. this is just the number of thread to run by wrap, "x, y, z" make easy 3D indexing.
+//void main (uint3 id : SV_DispatchThreadID, uint3 groupId : SV_GroupID)
+void main (uint3 id : SV_DispatchThreadID)
+{
+	if(targetChanged == 1){
+		
+		// particleBuffer[id.x] is the particle this thread must Update, according to the thread ID.
+		// id.x ---> x is x in (32, 1, 1)
+		//http://msdn.microsoft.com/en-us/library/windows/desktop/ff471566(v=vs.85).aspx
+		
+		// Direction and distance to target.
+		float3 dir = normalize(target - particleBuffer[id.x].position);
+		float dist = distance(target, particleBuffer[id.x].position); //was float3
+		//float facing = dot(dir, target);
+		
+		// Compute velocity and position of this particle.
+		//particleBuffer[id.x].velocity += targetStrengh * dir * deltaTime / dist;
+		//particleBuffer[id.x].position += particleBuffer[id.x].velocity * deltaTime;
+		
+		//the position doesn't change; I'm using the velocity for colouring purposes only
+		particleBuffer[id.x].velocity = (targetStrengh * dir * deltaTime / dist)*100;
+	}
+	
+	
+	float distL = distance(lPoint, particleBuffer[id.x].position);
+
+	if(distL <= 1){
+		//particleBuffer[id.x].noise = -10;
+		particleBuffer[id.x].flags = -10;
+	}
+
+
+	//uint3 currentXZ = groupId * uint3(32, 1, 32) + threadId;
+    //vertexBuffer.Append(float3(currentXZ.x / 10.0, sin(currentXZ.x / 10.0)*cos(currentXZ.z / 10.0), currentXZ.z/10.0));
+}

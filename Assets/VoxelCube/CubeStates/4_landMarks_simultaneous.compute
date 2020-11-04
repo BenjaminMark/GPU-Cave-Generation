@@ -1,0 +1,189 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel landMarks
+#include "noiseSimplex.cginc"
+
+struct VoxelParticle
+{
+	float3 position;
+	float3 velocity;
+	float noise;
+	float prevNoise;
+	int flags;
+};
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWStructuredBuffer<VoxelParticle> particleBuffer;
+
+// parameters from GPU
+float deltaTime;									// Even here deltaTime is needed!
+float3 target;										// Mouse position.
+int targetChanged;
+float targetStrengh;								// Strengh, from the inspector!
+float sprayOrbRadius;
+float spacing;
+int cubeSize;
+float3 tilePos;
+int frameNumber;
+int seedMod;
+float3 randomSeed;
+
+//TODO: READ THIS: https://stackoverflow.com/questions/7367770/how-to-flatten-or-index-3d-array-in-1d-array
+//			reverse: https://stackoverflow.com/questions/14845084/how-do-i-convert-a-1d-index-into-a-3d-index?rq=1
+int coordsToIndex(int x, int y,int z){
+	//Flat[x + WIDTH * (y + DEPTH * z)] = Original[x, y, z]
+	
+	//return x + cubeSize * (y + cubeSize * z);
+	//I have moved the x y z 's around, because the formula didn't match the way I built the cube in the first place
+	return x + (cubeSize) * (z + (cubeSize) * y);
+	//return z + (cubeSize*tilePos[0]) * (y + (cubeSize*tilePos[2]) * x); 
+
+}
+
+float rnd(uint seed)
+{
+    seed = (seed ^ 61) ^ (seed >> 16);
+    seed *= 9;
+    seed = seed ^ (seed >> 4);
+    seed *= 0x27d4eb2d;
+    seed = seed ^ (seed >> 15);
+    return asfloat(seed/4294967296.0);
+}
+
+[numthreads(32,1,1)]
+void landMarks (uint3 id : SV_DispatchThreadID)
+{
+	float threshold = 0.0;
+	float anchorlimit = -0.85;
+	int distTop = 0;
+	int distBot = 0;
+	int topOffset = 1;
+	int botOffset = 1;
+
+	if(targetChanged == 1){
+		// Direction and distance to target.
+		float3 dir = normalize(target - particleBuffer[id.x].position);
+		float dist = distance(target, particleBuffer[id.x].position); //was float3
+		particleBuffer[id.x].velocity = (targetStrengh * dir * deltaTime / dist)*100;
+	}
+	
+	particleBuffer[id.x].noise = particleBuffer[id.x].prevNoise;
+	VoxelParticle currentPoint = particleBuffer[id.x];
+	
+	int curPosX = particleBuffer[id.x].position.x-tilePos[0] / spacing;
+	int curPosY = particleBuffer[id.x].position.y-tilePos[1] / spacing;
+	int curPosZ = particleBuffer[id.x].position.z-tilePos[2] / spacing;
+
+	if(frameNumber == 0){
+	
+		if(currentPoint.noise > threshold){
+			return;
+		}
+		
+		float freqModulator = 4.0;
+		
+		float3 lowFreqPoint = currentPoint.position / freqModulator;
+		//lowFreqPoint.x /= freqModulator;
+		//lowFreqPoint.y /= freqModulator;
+		//lowFreqPoint.z /= freqModulator;
+		
+		float lowFreqNoise = snoise(float3(lowFreqPoint.x + randomSeed.x, lowFreqPoint.y + randomSeed.y, lowFreqPoint.z + randomSeed.z));
+		if(lowFreqNoise > anchorlimit){
+			return;
+		}
+			
+			
+		VoxelParticle tempPoint;
+		int sumDownNeighbors = 0;
+		int sumUpNeighbors = 0;
+		//Down
+		for(int x = -1; x <=1; x++){
+			for(int z = -1; z <= 1; z++){
+				tempPoint = particleBuffer[coordsToIndex(curPosX + x,
+	    											 	 curPosY - 1, 
+	    											 	 curPosZ + z)];
+	    		if(tempPoint.noise > threshold){
+	    			sumDownNeighbors++;
+	    		}							 			 
+			}
+		}
+	
+		//up
+		for(int i = -1; i <=1; i++){
+			for(int j = -1; j <= 1; j++){
+				tempPoint = particleBuffer[coordsToIndex(curPosX + i,
+	    											 	 curPosY + 1, 
+	    											 	 curPosZ + j)];
+	    		if(tempPoint.noise > threshold){
+	    			sumUpNeighbors++;
+	    		}							 			 
+			}
+		}
+		
+		if((sumDownNeighbors >=  7 )){ //|| sumUpNeighbors >= 7  )){
+			 //Makes an anchor point.
+			 
+			 
+			 
+			 for(int i = 0; i <= 1; i++){
+	    		for(int j = 0; j <= 1; j++){
+	    			int q = 0;
+	    			int length = 0;
+	    			int pos = 1;
+	    			
+	    			
+	    			tempPoint = particleBuffer[coordsToIndex(curPosX + i,
+	    											 	 curPosY - pos, 
+	    											 	 curPosZ + j)];
+	    											 	 
+	    			while(tempPoint.noise > threshold){
+	    				length++;
+	    				pos++;
+	    				tempPoint = particleBuffer[coordsToIndex(curPosX + i, curPosY - pos, curPosZ + j)];
+	    				//particleBuffer[coordsToIndex(curPosX + i, curPosY - pos, curPosZ + j)].flags = 30;
+	    			}
+	    			
+	    			
+	    			q = 0;
+	    			while(q <= length){
+	    				particleBuffer[coordsToIndex(curPosX + i, curPosY-q, curPosZ + j)].flags = 30+length;
+	    				
+	    				particleBuffer[coordsToIndex(curPosX + i, curPosY-q, curPosZ + j)].velocity.x = q;
+	    				q++;	 		
+	    			}							
+	    										
+	    			
+	    			
+	    			
+	    		}
+	    	}
+	    	
+	    	
+	    	//currentPoint.flags = 30;
+		}
+	} else {
+		if(currentPoint.flags >= 30){
+			float3 highFreqPos = mul(currentPoint.position, 8.0);
+			
+			float newNoise = snoise(float3(highFreqPos.x + randomSeed.x, highFreqPos.y + randomSeed.y, highFreqPos.z + randomSeed.z));
+			
+			if(newNoise > threshold){
+				newNoise *= -1;
+			}
+			
+			currentPoint.prevNoise = newNoise;
+			
+				
+		}
+		
+		particleBuffer[id.x] = currentPoint;
+	}
+	    		
+		
+	
+}
+
+
+
+
+

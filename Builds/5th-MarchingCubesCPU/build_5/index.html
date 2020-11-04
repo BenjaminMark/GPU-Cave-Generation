@@ -1,0 +1,306 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+		
+        
+<title>CubeOfCubes - Voxels - L-system - Unity</title>
+<meta charset="iso-8859-2">
+        
+<script type='text/javascript' src='https://ssl-webplayer.unity3d.com/download_webplayer-3.x/3.0/uo/jquery.min.js'></script>
+<script type="text/javascript">
+<!--
+	var unityObjectUrl = "http://webplayer.unity3d.com/download_webplayer-3.x/3.0/uo/UnityObject2.js";
+	if (document.location.protocol == 'https:')
+	unityObjectUrl = unityObjectUrl.replace("http://", "https://ssl-");
+	document.write('<script type="text\/javascript" src="' + unityObjectUrl + '"><\/script>');
+-->
+</script>
+
+<script type="text/javascript">
+<!--
+
+	var bottomStripHeight = 18;			
+   	var myWidth = 0, myHeight = 0, borderSize = 0;
+		
+	var config = {
+		width: "100%", 
+		height: "100%",
+		params: {enableDebugging:"0" }// context menu, right click menu, go fullscreen menu below: in config.params
+	};
+	config.params["disableContextMenu"] = true;
+	var u = new UnityObject2(config);
+			
+	jQuery(function() {
+		var $missingScreen = jQuery("#unityPlayer").find(".missing");
+		var $brokenScreen = jQuery("#unityPlayer").find(".broken");
+		$missingScreen.hide();
+		$brokenScreen.hide();
+
+		u.observeProgress(function (progress) {
+			switch(progress.pluginStatus) {
+				case "broken":
+					$brokenScreen.find("a").click(function (e) {
+						e.stopPropagation();
+						e.preventDefault();
+						u.installPlugin();
+						return false;
+					});
+					$brokenScreen.show();
+				break;
+				case "missing":
+					$missingScreen.find("a").click(function (e) {
+						e.stopPropagation();
+						e.preventDefault();
+						u.installPlugin();
+						return false;
+					});
+					$missingScreen.show();
+				break;
+				case "installed":
+					$missingScreen.remove();
+				break;
+				case "first":
+				break;
+			}
+		});
+		u.initPlugin(jQuery("#unityPlayer")[0], "5th-MarchingCubesCPU.unity3d");
+	});
+			
+	function reportSize() {
+		  myWidth = 0, myHeight = 0;
+		  if( typeof( window.innerWidth ) == 'number' ) {
+		    //Non-IE
+		    myWidth = window.innerWidth;
+		    myHeight = window.innerHeight;
+		  } else {
+		    if( document.documentElement &&
+		        ( document.documentElement.clientWidth || document.documentElement.clientHeight ) ) {
+		      //IE 6+ in 'standards compliant mode'
+		      myWidth = document.documentElement.clientWidth;
+		      myHeight = document.documentElement.clientHeight;
+		    } else {
+		      if( document.body && ( document.body.clientWidth || document.body.clientHeight ) ) {
+		        //IE 4 compatible
+		        myWidth = document.body.clientWidth;
+		        myHeight = document.body.clientHeight;
+		      }
+		    }
+		  }
+		}
+		
+		
+	function detectLang() {
+	/*
+		actualLang = (navigator.language) ? navigator.language : navigator.userLanguage;
+		if(actualLang=="pl"){
+			document.getElementById('info1').innerHTML = "Widok orbitalny | Ciągnij myszą aby obracać, skroluj aby przybliżać/oddalać<br>";
+			document.title = "Płynny Webplayer & stopka"
+		}
+		*/
+	}
+
+
+	function calculatewindow() {
+		reportSize();
+		myHeight -= bottomStripHeight;
+		document.getElementById("content").style.height = myHeight + 'px';
+		document.getElementById("unityPlayer").style.height = myHeight + 'px';
+	}	
+	
+	
+	window.onload = function (){calculatewindow();detectLang();}
+	window.onresize = function (){calculatewindow();}	
+		
+		
+-->
+</script>
+
+<script type="text/javascript">
+
+	function hideFooter(){
+	
+		//var foot = document.getElementById('info1');
+		//foot.style.visibility='hidden';
+		toggleFullScreen();
+	}
+
+	function toggleFullScreen() {
+		if ((document.fullScreenElement && document.fullScreenElement !== null) ||    
+		   (!document.mozFullScreen && !document.webkitIsFullScreen)) {
+		if (document.documentElement.requestFullScreen) {  
+		  document.documentElement.requestFullScreen();  
+		} else if (document.documentElement.mozRequestFullScreen) {  
+		  document.documentElement.mozRequestFullScreen();  
+		} else if (document.documentElement.webkitRequestFullScreen) {  
+		  document.documentElement.webkitRequestFullScreen(Element.ALLOW_KEYBOARD_INPUT);  
+		}  
+	  } else {  
+		if (document.cancelFullScreen) {  
+		  document.cancelFullScreen();  
+		} else if (document.mozCancelFullScreen) {  
+		  document.mozCancelFullScreen();  
+		} else if (document.webkitCancelFullScreen) {  
+		  document.webkitCancelFullScreen();  
+		}  
+	  }  
+	} 
+	
+	
+	
+
+	
+	var unityUrlToOpen = "0";
+	/*
+	function handleUnityLink(){
+		alert(unityUrlToOpen);
+		if(unityUrlToOpen.length > 2){
+
+			window.open(unityUrlToOpen, '_blank'); 
+			
+			unityUrlToOpen = "0";
+		}
+	}
+	*/
+	
+	function getDocHeight() {
+    var D = document;
+    return Math.max(
+        D.body.scrollHeight, D.documentElement.scrollHeight,
+        D.body.offsetHeight, D.documentElement.offsetHeight,
+        D.body.clientHeight, D.documentElement.clientHeight
+    );
+}
+
+
+	function populateURL(ulink, x, y){
+		
+		//unityUrlToOpen = ulink;
+		
+		var iframe = document.getElementById('urlFrame');
+				
+		iframe.className = "iShow";
+		iframe.style.left = x +24 + "px";;
+		iframe.style.top= getDocHeight() - y -18 + "px";;
+		
+		iframe.contentWindow.populateURL(ulink);
+        //iframe.src = iframe.src + '?' + encodeURIComponent(ulink);
+		
+		//alert(iframe.style.left);
+	}
+	
+	function hideURL(){
+		var iframe = document.getElementById('urlFrame');
+		iframe.className = "iHide";
+		//iframe.contentWindow.populateURL("0");
+	}
+	
+</script>
+
+<style type="text/css">
+	.iShow{
+		display: inline;
+	}
+	
+	.iHide{
+		display: none;
+	}
+	
+<!--
+	/* hide from ie on mac \*/
+		html {
+		height:100%;
+		margin: 0px;
+		padding: 0px;
+		overflow: hidden;
+		}
+			/* end hide */
+		body {
+		height:100%;
+		font-family: Helvetica, Verdana, Arial, sans-serif;
+			background-color: #cccccc;
+			color: #808080;
+		text-align: center;
+		font-size: medium;
+		border:0;
+		padding: 0;
+		margin: 0;
+		overflow:hidden;
+		}
+		
+		a:link, a:visited {
+			color: #000;
+		}
+		a:active, a:hover {
+			color: #666;
+		}
+		
+		div#content {
+		width: 100%;
+		height: 100%;
+		border:0;
+		padding: 0;
+		margin: 0;
+		overflow:hidden;
+		}
+
+		div.missing {
+			margin: auto;
+			position: relative;
+			top: 50%;
+			width: 193px;
+		}
+		div.missing a {
+			height: 63px;
+			position: relative;
+			top: -31px;
+		}
+		div.missing img {
+			border-width: 0px;
+		}
+		div#unityPlayer {
+			cursor: default;
+			width: 100%;
+			height: 100%;
+		}
+
+		
+		
+	div.footer {
+	width: 100%;
+	height: 16px; /*  must set: var bottomStripHeight = 18;		 */
+	background-color: rgba(0, 0, 0, 0.64);
+	padding: 2px;
+	margin: 0;
+	/*margin-top: 30px;*/
+	color: #FFF;
+	font-size: 12px;
+	}
+		
+-->
+</style>
+</head>
+<body >
+    <div id="content">
+		
+		<iframe id="urlFrame" src="http://itu.dk/people/tdbe/boxdrop/testing/iframe.html" class="iHide" frameborder="0" width="300px" height="19px" style="position: absolute; top: 64px; left: 50%; z-index: 100; ">
+			<p>Your browser does not support iframes.</p>
+		</iframe>
+
+		<div id="unityPlayer">
+			<div class="missing">
+				<a href="http://unity3d.com/webplayer/" title="Unity Web Player. Install now!">
+					<img alt="Unity Web Player. Install now!" src="http://webplayer.unity3d.com/installation/getunity.png" width="193" height="63" />
+				</a>
+			</div>
+		</div>
+	</div>
+
+    <div class="footer" id="info1">
+        <!--span style="margin-left: -130px;">Unity Web Player</span-->
+        <span style="position: absolute; left: 3px;">Scroll to zoom, Middle-Mouse to pan, Space + click to screw around.</span><span  style="position: absolute; left: 50%; margin-left: -80px;"><b>DirectX11 compute particles</b> </span>
+		<span style="float: left;"><small> </small></span>
+		<span style="float: right; padding-right: 20px; background-color: rgba(0, 0, 0, 0.35); padding: 3px; margin-top: -2px; margin-right: 3px; cursor: pointer;" onclick="hideFooter()">Click here to toggle Fullscreen.</span>
+    </div>
+
+</body>
+</html>

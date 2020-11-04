@@ -1,0 +1,18 @@
+﻿<Properties>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="MonoDevelop.Default" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\testParticle_Cube\ParticleCube.cs">
+    <Files>
+      <File FileName="Assets\testParticle_Cube\particles_distort.compute" Line="46" Column="3" />
+      <File FileName="Assets\testParticle_Cube\ParticleCube.cs" Line="477" Column="123" />
+      <File FileName="Assets\testParticle_Cube\particleCube.shader" Line="1" Column="1" />
+      <File FileName="Assets\testParticle_Cube\particles_withNoise.compute" Line="1" Column="1" />
+      <File FileName="Assets\testParticle_Cube\simpleAutomaton.compute" Line="1" Column="1" />
+      <File FileName="Assets\testParticle_Cube\CubeMarcher.cs" Line="34" Column="30" />
+      <File FileName="Assets\testParticle_Cube\MarchingCubes.cs" Line="144" Column="3" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+</Properties>

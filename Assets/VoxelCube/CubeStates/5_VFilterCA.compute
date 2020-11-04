@@ -1,0 +1,132 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel simpleAutomaton
+//#include "noiseSimplex.cginc"
+
+struct VoxelParticle
+{
+	float3 position;
+	float3 velocity;
+	float noise;
+	float prevNoise;
+	int flags;
+};
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWStructuredBuffer<VoxelParticle> particleBuffer;
+
+// parameters from GPU
+//float deltaTime;									// Even here deltaTime is needed!
+//float3 target;										// Mouse position.
+//int targetChanged;
+//float targetStrengh;								// Strengh, from the inspector!
+//float sprayOrbRadius;
+float spacing;
+int cubeSize;
+float3 tilePos;
+float3 randomSeed;
+int applyPrevNoise;
+
+//TODO: READ THIS: https://stackoverflow.com/questions/7367770/how-to-flatten-or-index-3d-array-in-1d-array
+//			reverse: https://stackoverflow.com/questions/14845084/how-do-i-convert-a-1d-index-into-a-3d-index?rq=1
+int coordsToIndex(int x, int y,int z){
+	//Flat[x + WIDTH * (y + DEPTH * z)] = Original[x, y, z]
+	
+	//return x + cubeSize * (y + cubeSize * z);
+	//I have moved the x y z 's around, because the formula didn't match the way I built the cube in the first place
+	return x + (cubeSize) * (z + (cubeSize) * y);
+	//return z + (cubeSize*tilePos[0]) * (y + (cubeSize*tilePos[2]) * x); 
+
+}
+
+
+[numthreads(32,1,1)]
+void simpleAutomaton (uint3 id : SV_DispatchThreadID)
+{
+	/*
+	if(targetChanged == 1){
+		// Direction and distance to target.
+		float3 dir = normalize(target - particleBuffer[id.x].position);
+		float dist = distance(target, particleBuffer[id.x].position); //was float3
+		//particleBuffer[id.x].velocity = (targetStrengh * dir * deltaTime / dist)*100;
+		particleBuffer[id.x].velocity = ( dir * deltaTime / dist)*100;
+	}
+	*/
+	//float threshold = 0.00f;
+	//int count = 0;
+
+	//this means don't run for the nodes with no noise in them
+	if(particleBuffer[id.x].flags >= -10){
+	//TODO: flags 10 == wall point, flags -10 == l-system point, and -20 == nothing-no-noise-point)
+		/*
+		if(applyPrevNoise > 0){
+			particleBuffer[id.x].noise = particleBuffer[id.x].prevNoise;
+		}
+		else{*/
+		
+			//int ctEmpty = 0;
+			//float sumEmpty = 0;
+			//int ctFull = 0;
+			//float sumFull = 0;
+			bool isSurface = false;
+
+			int x = (particleBuffer[id.x].position.x-tilePos[0]) / spacing;
+			int y = (particleBuffer[id.x].position.y-tilePos[1]) / spacing;
+			int z = (particleBuffer[id.x].position.z-tilePos[2]) / spacing;
+			
+			VoxelParticle tempPoint;
+		    for(int i = -2; i <= 2; i++){
+		    	for(int j = -2; j <= 2; j++){
+		    		for(int k = -2; k <= 2; k++){
+		    			//if(!(i == 0 && j == 0 && k == 0)){
+		    				tempPoint = particleBuffer[coordsToIndex(x + i,
+		    											 			 y + j, 
+		    											 			 z + k)
+		    											  ];
+		    					    							  				  				  				  
+			    			//NOTE: .noise is between -1 and 1. 
+			    			//		.flags so far can be -20 (nothing), -10 (l-system) and 10 (outer wall/shell of tunnel)
+			    			if(distance(tempPoint.position, particleBuffer[id.x].position) < spacing*spacing){
+		    					/*
+				    			if( tempPoint.noise > threshold){
+				    				
+				    				ctEmpty++;
+				    				sumEmpty += tempPoint.noise;
+				    			}
+				    			else{
+				    				ctFull++;
+				    				sumFull += tempPoint.noise;
+				    			}*/
+				    			
+				    			if(tempPoint.noise * particleBuffer[id.x].noise <= 0){ // <= ?
+				    				isSurface = true;
+				    				
+				    			}
+			    			}
+			    			else{
+			    				isSurface = true;
+			    			}
+		    			//}
+		    			if(isSurface){ break;}
+		    		}
+		    		if(isSurface){ break;}
+		    	}
+		    	if(isSurface){ break;}	
+		    }
+		    
+		    if(!isSurface){
+		    	particleBuffer[id.x].noise = 10;
+		    	//particleBuffer[id.x].velocity = float3(1000, 1000, 1000);
+		    }
+		    //else{
+		    //	particleBuffer[id.x].velocity = float3(-1000, -1000, -1000);
+		    //}
+		    
+		    
+		//}
+	}
+}
+
+
+
+

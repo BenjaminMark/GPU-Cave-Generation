@@ -1,0 +1,224 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel simpleAutomaton
+#include "noiseSimplex.cginc"
+
+struct VoxelParticle
+{
+	float3 position;
+	float3 velocity;
+	float noise;
+	float prevNoise;
+	int flags;
+};
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWStructuredBuffer<VoxelParticle> particleBuffer;
+
+// parameters from GPU
+//float deltaTime;									// Even here deltaTime is needed!
+//float3 target;										// Mouse position.
+//int targetChanged;
+//float targetStrengh;								// Strengh, from the inspector!
+//float sprayOrbRadius;
+float spacing;
+int cubeSize;
+float3 tilePos;
+float3 randomSeed;
+int applyPrevNoise;
+
+//TODO: READ THIS: https://stackoverflow.com/questions/7367770/how-to-flatten-or-index-3d-array-in-1d-array
+//			reverse: https://stackoverflow.com/questions/14845084/how-do-i-convert-a-1d-index-into-a-3d-index?rq=1
+int coordsToIndex(int x, int y,int z){
+	//Flat[x + WIDTH * (y + DEPTH * z)] = Original[x, y, z]
+	
+	//return x + cubeSize * (y + cubeSize * z);
+	//I have moved the x y z 's around, because the formula didn't match the way I built the cube in the first place
+	return x + (cubeSize) * (z + (cubeSize) * y);
+	//return z + (cubeSize*tilePos[0]) * (y + (cubeSize*tilePos[2]) * x); 
+
+}
+
+
+[numthreads(32,1,1)]
+void simpleAutomaton (uint3 id : SV_DispatchThreadID)
+{
+	/*
+	if(targetChanged == 1){
+		// Direction and distance to target.
+		float3 dir = normalize(target - particleBuffer[id.x].position);
+		float dist = distance(target, particleBuffer[id.x].position); //was float3
+		//particleBuffer[id.x].velocity = (targetStrengh * dir * deltaTime / dist)*100;
+		particleBuffer[id.x].velocity = ( dir * deltaTime / dist)*100;
+	}
+	*/
+	float threshold = 0.00f;
+	//int count = 0;
+
+	//this means don't run for the nodes with no noise in them
+	if(particleBuffer[id.x].flags >= -10){
+	//TODO: flags 10 == wall point, flags -10 == l-system point, and -20 == nothing-no-noise-point)
+		if(applyPrevNoise > 0){
+			particleBuffer[id.x].noise = particleBuffer[id.x].prevNoise;
+		}
+		else{
+		
+			int ctEmpty = 0;
+			float sumEmpty = 0;
+			int ctFull = 0;
+			float sumFull = 0;
+			bool isEdge = false;
+
+			int x = (particleBuffer[id.x].position.x-tilePos[0]) / spacing;
+			int y = (particleBuffer[id.x].position.y-tilePos[1]) / spacing;
+			int z = (particleBuffer[id.x].position.z-tilePos[2]) / spacing;
+			
+			VoxelParticle tempPoint;
+		    for(int i = -1; i <= 1; i++){
+		    	for(int j = -1; j <= 1; j++){
+		    		for(int k = -1; k <= 1; k++){
+		    			if(!(i == 0 && j == 0 && k == 0)){
+		    				tempPoint = particleBuffer[coordsToIndex(x + i,
+		    											 			 y + j, 
+		    											 			 z + k)
+		    											  ];
+		    					    							  				  				  				  
+			    			//NOTE: .noise is between -1 and 1. 
+			    			//		.flags so far can be -20 (nothing), -10 (l-system) and 10 (outer wall/shell of tunnel)
+			    			if(distance(tempPoint.position, particleBuffer[id.x].position) < spacing*spacing){
+		    					
+				    			if( tempPoint.noise > threshold){
+				    				
+				    				ctEmpty++;
+				    				sumEmpty += tempPoint.noise;
+				    			}
+				    			else{
+				    				ctFull++;
+				    				sumFull += tempPoint.noise;
+				    			}
+			    				
+			    			}
+			    			else{
+			    				//ctEmpty+=2;
+				    			////sumEmpty += particleBuffer[id.x].noise*2;
+				    			//sumEmpty += 2;
+				    			
+				    			//ctEmpty+=10;
+				    			//ctFull+=10;
+				    			isEdge = true;
+				    			
+				    			/*
+				    			if( particleBuffer[id.x].noise > threshold){
+				    				
+				    				ctEmpty+=3;
+				    				//sumEmpty += particleBuffer[id.x].noise/2;//*10;//2
+				    			}
+				    			else{
+				    				ctFull-=3;
+				    				//sumFull += particleBuffer[id.x].noise/2;//*2;
+				    			}
+				    			*/
+			    			}
+			    				
+			    			//this colours the points that are being sampled; for debugging.
+							/*
+							particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing + i,
+			    										 (particleBuffer[id.x].position.y-tilePos[1]) / spacing + j, 
+			    										 (particleBuffer[id.x].position.z-tilePos[2]) / spacing + k)
+			    											  ].velocity = 99999;
+			    			*/
+		    				
+		    				
+		    			}
+
+		    		}
+		    	}
+		    }
+		    
+
+		   	if(isEdge){
+		   		particleBuffer[id.x].prevNoise = 0;
+		   	}else
+			if(ctEmpty >0 && ctFull >0){// && particleBuffer[id.x].velocity.x != 13){
+			
+				float avgE = sumEmpty / ctEmpty;
+				float avgF = sumFull / ctFull;
+				
+				if(ctEmpty > ctFull){
+					
+					//particleBuffer[id.x].prevNoise = (((avgE + avgE + avgF ) / 3) + particleBuffer[id.x].prevNoise)/2;
+					//particleBuffer[id.x].prevNoise = ((avgE*2 + avgF ) / 3) ;
+					
+					//particleBuffer[id.x].prevNoise = ((avgE*1.25 + avgF*0.75 ) / 2) ;
+					particleBuffer[id.x].prevNoise = ((avgE*1.20 + avgF*0.80 ) / 2) ;
+					//particleBuffer[id.x].prevNoise = (((avgE*1.20 + avgF*0.80 ) / 2) + particleBuffer[id.x].noise)/2;
+					/*
+					if(particleBuffer[id.x].velocity.x != 13){
+						//particleBuffer[id.x].prevNoise = ((avgE*2 + avgF ) / 3) ;
+						particleBuffer[id.x].prevNoise = ((avgE*1.5 + avgF*0.5 ) / 2) ;
+					}
+					else{
+						//particleBuffer[id.x].prevNoise = ((avgE + avgF*2 ) / 3) ;
+						particleBuffer[id.x].prevNoise = ((avgE*0.5 + avgF*1.5 ) / 2) ;
+					}
+					*/
+				}
+				else{
+					//particleBuffer[id.x].prevNoise = (((avgE + avgF + avgF ) / 3) + particleBuffer[id.x].prevNoise)/2;
+					//particleBuffer[id.x].prevNoise = ((avgE + avgF*2 ) / 3) ;
+					
+					//particleBuffer[id.x].prevNoise = ((avgE*0.75 + avgF*1.25 ) / 2) ;
+					particleBuffer[id.x].prevNoise = ((avgE*0.80 + avgF*1.20) / 2) ;
+					//particleBuffer[id.x].prevNoise = (((avgE*0.80 + avgF*1.20) / 2) + particleBuffer[id.x].noise)/2 ;
+					/*
+					if(particleBuffer[id.x].velocity.x != 13){
+						//particleBuffer[id.x].prevNoise = ((avgE + avgF*2 ) / 3) ;
+						particleBuffer[id.x].prevNoise = ((avgE*0.5 + avgF*1.5 ) / 2) ;
+					}
+					else{
+						//particleBuffer[id.x].prevNoise = ((avgE*2 + avgF ) / 3) ;
+						particleBuffer[id.x].prevNoise = ((avgE*0.5 + avgF*1.5 ) / 2) ;
+					}
+					*/
+				}
+				//particleBuffer[id.x].velocity.x = 13;
+				//particleBuffer[id.x].prevNoise = (sumEmpty / ctEmpty + (sumFull / ctFull)) / 2;
+			}							  
+
+			/*
+				mapping [A, B] to [0.3, 0.8]
+				yourVal =  ((yourVal - A) / (B - A)) * (0.8 - 0.3) + 0.3;
+			*/
+			/*
+			if(isEdge){
+		   		//particleBuffer[id.x].prevNoise = particleBuffer[id.x].prevNoise/2 + 0.5;
+		   		particleBuffer[id.x].prevNoise += 1;
+			}
+			*/
+			/*
+			if(isEdge && particleBuffer[id.x].prevNoise <0){
+		   		//particleBuffer[id.x].prevNoise = particleBuffer[id.x].prevNoise/2 + 0.5;
+		   		particleBuffer[id.x].prevNoise *= -1;
+			}
+			*/
+			//if(isEdge){
+		   		//particleBuffer[id.x].prevNoise = particleBuffer[id.x].prevNoise/2 + 0.5;
+		   	//	particleBuffer[id.x].prevNoise = 0;//((particleBuffer[id.x].prevNoise+1)/2)*0.5+0.7;
+			//}
+
+		    
+		    //particleBuffer[coordsToIndex(particleBuffer[id.x].position.x, particleBuffer[id.x].position.y, particleBuffer[id.x].position.z)].noise = -10;
+		}
+	}
+	//making sure the coordsToIndex works
+	//particleBuffer[id.x].position = particleBuffer[coordsToIndex(30, 30, 30)].position;
+	
+	//more debugging
+	//todo: this is the correct sampling:
+	//if(particleBuffer[id.x].position.y <= 30 * spacing)
+	//	particleBuffer[coordsToIndex(particleBuffer[id.x].position.x/spacing, particleBuffer[id.x].position.y/spacing, 30)].velocity = 99999;
+}
+
+
+
+

@@ -1,0 +1,377 @@
+#pragma kernel main
+//#include "noiseSimplex.cginc"
+#include "../../Standard Assets/Shaders/ScrawkShaderWorleyVoronoi/3D/ImprovedVoronoiNoise3D.cginc"
+#define OCTAVES 1
+
+//TODO: NOTE: to syntax highlight this stuff: http://forum.unity3d.com/threads/164982-MonoDevelop-Syntax-Highlighting-for-compute-shaders?p=1127569
+
+// The same particle data structure used by both the compute shader and the shader.
+struct VoxelParticle
+{
+	float3 position;
+	float3 velocity;
+	float noise;
+	float prevNoise;
+	int flags;
+	//float3 cubeVerts[8];
+};
+
+// The buffer holding the particles shared with the regular shader.
+RWStructuredBuffer<VoxelParticle> particleBuffer;
+//float3 cubed_verts[8];
+
+// parameters from GPU
+//float deltaTime;									// Even here deltaTime is needed!
+//float3 target;										// Mouse position.
+//int targetChanged;
+//float targetStrengh;								// Strengh, from the inspector!
+float sprayOrbRadius;
+float sprayOrbOuterRadius;
+float3 lPoint; 
+//float2 lNoise; 
+//float3 lNoise; 
+float4 lNoise; 
+float3 randomSeed;
+float noiseOctave;
+float noiseDistAtten;
+float metaballDistortionFade;
+   
+
+
+// hash based 3d value noise; https://stackoverflow.com/questions/15628039/simplex-noise-shader
+// function taken from https://www.shadertoy.com/view/XslGRr
+// Created by inigo quilez - iq/2013
+// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+// ported from GLSL to HLSL
+float hash( float n )
+{
+    return frac(sin(n)*43758.5453);
+}
+
+float noise( float3 x )
+{
+    // The noise function returns a value in the range -1.0f -> 1.0f
+
+	//x = abs(x);
+
+    float3 p = floor(x);
+    float3 f = frac(x);
+
+    f       = f*f*(3.0-2.0*f);
+    float n = p.x + p.y*57.0 + 113.0*p.z;
+
+    return lerp(lerp(lerp( hash(n+0.0), hash(n+1.0),f.x),
+                   lerp( hash(n+57.0), hash(n+58.0),f.x),f.y),
+               lerp(lerp( hash(n+113.0), hash(n+114.0),f.x),
+                   lerp( hash(n+170.0), hash(n+171.0),f.x),f.y),f.z);
+}
+
+
+float noise0(half3 myP)
+	{
+	    float output = noise(myP);
+	    return output;
+	}
+
+	float noise1(half3 myP)
+	{
+	    half3 newP = half3(myP.y + 31.416, myP.z - 47.853, myP.x + 12.793);
+	    return noise(newP);
+
+	}
+
+	float noise2(half3 myP)
+	{
+	    half3 newP = half3(myP.z - 233.145, myP.x - 113.408, myP.y + 185.31);
+	    return noise(newP);
+
+	}
+
+
+	half3 potential(float x, float y, float z)
+	{
+	    float roughness = 0.78;//0.4;//0.75;   
+	    half3 psi = 0;
+	    int i;
+	    float valueMult = 1;//1;
+
+	    half3 myP = half3(x,y,z);
+
+	    for (i = 0; i < 3; i++)//floor(octaves)
+	    {
+	        float sx = myP.x / 0.34;//0.4
+	        float sy = myP.y / 0.34;
+	        float sz = myP.z / 0.34;
+	        half3 newP = half3(sx,sy,sz);            
+	        half3 tPsi = half3(noise0(newP), noise1(newP), noise2(newP));
+
+	        psi += tPsi* valueMult;
+	        valueMult = valueMult * roughness;
+	    }
+	    
+	return psi;
+	}
+
+
+	//half3 get_velocity(half3 myP, float octaves)
+	float3 get_Curl(float3 myP)
+	{
+		//myP.x += _Seed.x;
+		//myP.y += _Seed.y;
+		//myP.z += _Seed.z;
+		
+		float deltaX = 0.005;//0.0001;
+
+	    float v0 = ( potential(myP.x,myP.y + deltaX, myP.z).z - potential(myP.x, myP.y - deltaX, myP.z).z )
+	                - ( potential(myP.x, myP.y, myP.z + deltaX).y - potential(myP.x, myP.y, myP.z - deltaX).y ) / (2 * deltaX);
+
+	    float v1 = ( potential(myP.x, myP.y, myP.z + deltaX).x - potential(myP.x, myP.y, myP.z - deltaX).x )
+	                - ( potential(myP.x + deltaX, myP.y, myP.z).z - potential(myP.x - deltaX, myP.y, myP.z).z ) / (2 * deltaX);
+
+	    float v2 = ( potential(myP.x + deltaX, myP.y, myP.z).y - potential(myP.x - deltaX, myP.y, myP.z).y )
+	                - ( potential(myP.x, myP.y + deltaX, myP.z).x - potential(myP.x, myP.y - deltaX, myP.z).x ) / (2 * deltaX);
+
+	    return float3(v0,v1,v2);
+	} 
+ 
+	float get_Curl1D (float3 myP)
+	{
+		//myP.x += _Seed.x;
+		//myP.y += _Seed.y;
+		//myP.z += _Seed.z;
+		
+		float deltaX = 0.5;//0.0001;
+
+	    float v0 = ( potential(myP.x,myP.y + deltaX, myP.z).z - potential(myP.x, myP.y - deltaX, myP.z).z )
+	                - ( potential(myP.x, myP.y, myP.z + deltaX).y - potential(myP.x, myP.y, myP.z - deltaX).y ) / (2 * deltaX);
+
+	    return v0;
+	} 
+	
+	
+
+float customDist(float3 pt1, float3 pt2){
+	/*
+	xd = x2-x1
+	yd = y2-y1
+	zd = z2-z1
+	Distance = SquareRoot(xd*xd + yd*yd + zd*zd)
+	*/
+	
+	pt1+=randomSeed;
+	pt2+=randomSeed;
+	
+	//float sn = noise(pt2/20)*2;
+	//float sn = noise(pt2/11)*4;
+	//float sn = noise(pt2/12)*6;//highest (lowest nr) limit of /freq should be 5, hightst should be 20;
+	float sn = noise(pt2/10)*3;//highest (lowest nr) limit of /freq should be 5, hightst should be 20;
+	//float sn2 = noise(pt2/150);
+	
+	//float3 ptNoise = get_Curl1D(pt2/34);
+	//float ptNoise = get_Curl1D(pt2/40);
+	//float ptNoise = get_Curl1D(pt2/40)/2;
+	
+	float jumble = 1;
+	if(lNoise.y<1){
+		jumble = 1.7;
+	}
+	
+	
+	float xd = (pt2.x - pt1.x) *lNoise.x;
+	//xd = (xd*3 + xd*ptNoise.x)/4;
+	float yd = (pt2.y - pt1.y) *lNoise.y;
+	//yd = (yd*3 + yd*ptNoise.y)/4;
+	float zd = (pt2.z - pt1.z) *lNoise.z;
+	//zd = (zd*3 + zd*ptNoise.z)/4;
+	//return (xd*xd *lNoise.x + yd*yd *lNoise.y + zd*zd *lNoise.x);
+	//return (xd*xd *lNoise.x + yd*yd *lNoise.y + zd*zd *lNoise.z);
+	
+	
+	
+	
+	//TODO		-a lookup texture with custom isolated dark lines, could make crevaces if sampled properly (perhaps 3 of them "projected")
+	//words of wisdom (@ 2^i): https://stackoverflow.com/questions/18279456/any-simplex-noise-tutorials-or-resources
+	
+	_Frequency = 0.012;//0.012;//0.013;//0.011;//0.021;//, _Lacunarity, _Gain, _Jitter, _Amp;
+	_Jitter = 2;
+	//_Amp = 80;
+	/*
+		_Frequency("Frequency", float) = 10.0
+		_Lacunarity("Lacunarity", float) = 2.0
+		_Gain("Gain", float) = 0.5
+		_Jitter("Jitter", Range(0,1)) = 1.0
+	*/
+	//TODO: pt2 *= randomSeed;
+	float voronoise = fBm_F1_F0(pt2, OCTAVES)*0.525 ;//0.6//*0.5;//fBm_F0 //fBm_F1_F0
+	
+	_Frequency = 0.025;//0.025;//0.00921;
+	//_Jitter = 2;//0.5
+	float voronoise2 = fBm_F1_F0(pt2, OCTAVES)*1.4;// *jumble;//fBm_F0 //fBm_F1_F0
+	
+	_Frequency = 0.009;//0.009;//0.00921;
+	//_Jitter = 2;//0.5
+	float voronoise3 = fBm_F1_F0(pt2, OCTAVES)*0.825;//0.85// *-jumble;//*0.8;//0.75;//fBm_F0 //fBm_F1_F0
+	
+	//_Frequency = 0.1;//0.00921;
+	//_Jitter = 2;//0.5
+	//float voronoise4 = fBm_F1_F0(pt2, OCTAVES)*1;//fBm_F0 //fBm_F1_F0
+	
+	//TODO: try to simplify the math even further
+	
+	float res = (xd*xd + yd*yd + zd*zd);
+	//res = (res*3 + res * ptNoise + res * sn + res*voronoise)/6; //the last division makes things larger
+	//res = (res*3 + res * sn + res * ptNoise - res*voronoise*2)/8;
+	//res = (res*3 + res * sn - res*voronoise*4)/5;
+	//res = (res*3 - res * sn + res*voronoise*38)/5;//AWESOME SHARP _Frequency = 0.021; j=1; sn = noise(pt2/10)*3;
+	//res = (res*6 - res * sn + res*voronoise*28)/17;//AWESOME SHARP 2 _Frequency = 0.021; j=1; sn = noise(pt2/10)*3;
+	//res = (res*6 - res * sn + res*(voronoise*voronoise2)*30)/17;//AWESOME SHARP 2 _Frequency = 0.008; j=1; sn = noise(pt2/10)*3; _Freq2=0.015;
+	//res = (res*6 - res * sn + res*(voronoise*voronoise2)*20)/25;
+	//res = (res*5 - res * sn + res*(voronoise+voronoise2)*25)/15;
+	//res = (res*5 - res * sn + res*voronoise*9 +res*voronoise2*22)/12;// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	
+	//res = (res*(1 - sn*2 + voronoise*30 +voronoise2*38))/12;// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	//res = (res*(4 - sn + (voronoise+voronoise2+voronoise3)*voronoise*80))/12;// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	//res = (res*(5 - sn + (voronoise+voronoise2+voronoise3)*voronoise*80))/12;// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	//res = (res*(5 - sn + (voronoise+voronoise2+voronoise3)*voronoise*50))/15;// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	//float lCN = lNoise.x*lNoise.y*lNoise.z;//TODO send a vector4 so you don't need to mul here
+	//res = (res*((lCN+1)*3 - sn*((lCN+1.5)/2) + (voronoise+voronoise2+voronoise3)*voronoise*(50+((lCN+1)*3))))/15;// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	//TODO: if you uncomment these fix the 83 into *30 for the last part
+	//res = (res*((voronoise+1)*3 - sn*((voronoise3+1.5)/2) + (voronoise+voronoise2+voronoise3)*voronoise*(50+((lCN+1)*3))))/15;// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	//res = (res*((voronoise2*lCN+1)*3.5 - sn*((voronoise3+1.5)/2) + (voronoise+voronoise2+voronoise3)*voronoise*(50+((lCN+1)*3))))/15;// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	//res = (res*((voronoise2*lCN+metaballDistortionFade)*3.5 - sn*((voronoise3+1.5)/2) + (voronoise+voronoise2+voronoise3)*voronoise*(50+((lCN+1)*30))))/15;// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	//float param3 = ((lCN+1)*30);//*20
+	//float param3 = ((lNoise.w+1)*30);//*20
+	
+	float lxsn = lNoise.w*sn;
+	
+
+	float param3 = ((lxsn+1)*50);//50;//30//*20 
+	//float param3 = ((lNoise.w+1)*40);//30//*20 
+	//res = (res*((voronoise2*lCN+metaballDistortionFade)*3.5 - sn*(( voronoise3+2)/2) + (voronoise+voronoise2+voronoise3)*voronoise*(50+param3)))/(5+param3/2);// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	
+	//res = (res*((lCN+metaballDistortionFade)*3.5 - sn*(( voronoise3*voronoise2+1.5)/2) + (voronoise+voronoise2+voronoise3)*voronoise*(50+param3)))/(7+param3/2);// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	//res = (res*((lxsn+metaballDistortionFade)*4.5 - sn*(( voronoise*voronoise3+1.5)/2) + (voronoise+voronoise2+voronoise3)*voronoise*(30+param3)))/(6+param3/2);// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	
+	//res = (res*((lxsn+metaballDistortionFade)*5 - sn*(( voronoise*voronoise3+1.5)/2) + (voronoise+voronoise2+voronoise3)*voronoise*(30+param3)))/(4+param3/2);// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	//res = (res*((lNoise.w*metaballDistortionFade)*5 - sn*(voronoise3) + (voronoise+voronoise2+voronoise3)*voronoise*(30+param3)))/(4+param3/2);// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	//float res2 = (res*(lNoise.w*5 - sn*(voronoise3) + (voronoise +voronoise2+voronoise3)*voronoise*(30+param3)))/(4+param3/2);// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	//float res2 = (res*(lNoise.w*5 - sn*(voronoise3) + (voronoise +voronoise2+voronoise3)*voronoise*(30+param3)))/(4+param3/8);// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	//float res2 = (res*(lNoise.w*5 - sn*(voronoise3) + (voronoise +voronoise2+voronoise3)*voronoise*(30+param3)))/(4+param3/5);// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	float res2 = (res*(lNoise.w*5 - sn*(voronoise3) + (voronoise +voronoise2+voronoise3)*voronoise*(param3)))/(4+param3/6);// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	
+	//if(lNoise.y>=1){
+	res = lerp(res2, res, metaballDistortionFade);
+	//}
+
+	
+
+	
+	//res = (res*((sn*metaballDistortionFade)*(18*voronoise3) - sn*(( voronoise*voronoise3+1.5)/2) + (voronoise+voronoise2+voronoise3)*voronoise*(30+param3)))/(4+param3/2);// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	//res = (res*((sn*metaballDistortionFade)*(18*voronoise3) - sn*(( voronoise*voronoise3+1.5)/2) + (voronoise+voronoise2+voronoise3)*voronoise*(30+param3)))/(param3/2);// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	//TODO: simplify equation. (( voronoise*voronoise3+1.5)/2) - fxed small blobs??
+	//res = (res*((lxsn+metaballDistortionFade)*(12*sn2) - sn*voronoise*voronoise3 + (voronoise+voronoise2+voronoise3)*voronoise*(30+param3)))/(4+param3/2);// Pretty good. _Frequency = 0.025 _Jitter = 0.9;; _Frequency = 0.009 _Jitter = 2;//0.5
+	
+	//something like 3.5 should be the top limit of the fade slider. lowest should be 1
+	
+	//res = (res*5 - res * sn + res*voronoise*30 )/12;
+	
+	//res = (res - res * voronoise2 + res*voronoise)/5;// SHARP w/o simplex; sharp riverbeds: v1: _Frequency = 0.021;, _Jitter = 0.9;. v2: _Frequency = 0.00921; jitter = 1;
+	//res = (res - res * voronoise2*1.4 + res*voronoise*1.4)/2;// SHARP w/o simplex; sharp riverbeds: v1: _Frequency = 0.021;, _Jitter = 0.9;. v2: _Frequency = 0.00921; jitter = 1;
+	//res = (res*3 - res * voronoise2 *3.5 + res*voronoise*3.5)/5;// Classic w/o simplex; tidier and no potholes: v1: _Frequency = 0.021;, _Jitter = 0.7;. v2: _Frequency = 0.00921; jitter = 1;
+	//res = (res*3 + res * sn - res*voronoise*6)/5;//Classic smooth-ish: _Frequency = 0.0011; float sn = noise(pt2/15)*3;
+	//res = (res*3 + res * ptNoise)/4; //curl responsible for floating geom
+	
+	return res;
+	//return (xd*xd + yd*yd + zd*zd);
+}
+
+[numthreads(32,1,1)] 								// 32 is the minimal size to fullfill the wrap. this is just the number of thread to run by wrap, "x, y, z" make easy 3D indexing.
+//void main (uint3 id : SV_DispatchThreadID, uint3 groupId : SV_GroupID)
+void main (uint3 id : SV_DispatchThreadID)
+{
+	/*
+	if(targetChanged){
+		// particleBuffer[id.x] is the particle this thread must Update, according to the thread ID.
+		// id.x ---> x is x in (32, 1, 1)
+		//http://msdn.microsoft.com/en-us/library/windows/desktop/ff471566(v=vs.85).aspx
+		
+		// Direction and distance to target.
+		float3 dir = normalize(target - particleBuffer[id.x].position);
+		float dist = distance(target, particleBuffer[id.x].position); //was float3
+		//float facing = dot(dir, target);
+
+		// Compute velocity and position of this particle.
+		//particleBuffer[id.x].velocity += targetStrengh * dir * deltaTime / dist;
+		//particleBuffer[id.x].position += particleBuffer[id.x].velocity * deltaTime;
+		
+		//the position doesn't change; I'm using the velocity for colouring purposes only
+		particleBuffer[id.x].velocity = (targetStrengh * dir * deltaTime / dist)*100;
+	}
+	*/	
+	/*
+	float3 alteredPos = float3( particleBuffer[id.x].position.x * lNoise.x, 
+								particleBuffer[id.x].position.y * lNoise.y, 
+								particleBuffer[id.x].position.z * lNoise.x);
+								*/
+	//float distL = distance(lPoint, particleBuffer[id.x].position);
+	float distMod = customDist(lPoint, particleBuffer[id.x].position);
+	float smallRad = sprayOrbRadius * sprayOrbRadius;
+	float largeRad = sprayOrbOuterRadius * sprayOrbOuterRadius;
+	if(distMod <= 1){//TODO: we can make the L system path thicker here by saying <= 2 or 3 etc
+		particleBuffer[id.x].flags = -10;//-10 == l-point
+		//TODO: note this means the centre of each tunnel will be empty.
+		particleBuffer[id.x].noise = 1;
+		particleBuffer[id.x].prevNoise = 1;
+	}									//if we didn't already calculate noise for this point, or if it's an OuterRadius point
+	else{// if(particleBuffer[id.x].flags == -20 || particleBuffer[id.x].flags == 10){
+	
+		//float d = 100 * (distMod/6);//20// the larger distMod, the more weight this 100 has. distMod == 1 should mean d is 1.
+		float d = noiseOctave * (distMod/noiseDistAtten);
+		
+								
+		if(distMod <= smallRad ){
+			//particleBuffer[id.x].prevNoise = noise(float3((particleBuffer[id.x].position.x + randomSeed.x)/d, (particleBuffer[id.x].position.y + randomSeed.y)/d, (particleBuffer[id.x].position.z + randomSeed.z)/d));
+			//particleBuffer[id.x].noise = (noise(float3((particleBuffer[id.x].position.x + randomSeed.x)/d, (particleBuffer[id.x].position.y + randomSeed.y)/d, (particleBuffer[id.x].position.z + randomSeed.z)/d))+1)/2;
+			//particleBuffer[id.x].noise = (noise(float3((particleBuffer[id.x].position.x + randomSeed.x)/d, (particleBuffer[id.x].position.y + randomSeed.y)/d, (particleBuffer[id.x].position.z + randomSeed.z)/d))+1)/2;
+			//particleBuffer[id.x].noise = 1 - (distMod / smallRad);
+			particleBuffer[id.x].prevNoise = 1 - (distMod / smallRad);
+			if(particleBuffer[id.x].noise < particleBuffer[id.x].prevNoise){
+				particleBuffer[id.x].noise = particleBuffer[id.x].prevNoise;
+			}/*
+			else{
+				//particleBuffer[id.x].noise *=0.75;
+				//TODO: "stone coarseness"
+				//particleBuffer[id.x].noise = particleBuffer[id.x].prevNoise;//saturate(particleBuffer[id.x].noise * 1.25);//1.5
+				particleBuffer[id.x].noise *= 0.2;// saturate(particleBuffer[id.x].noise * 1);//0.1);
+				//particleBuffer[id.x].noise = (particleBuffer[id.x].noise+particleBuffer[id.x].prevNoise)/2;// saturate(particleBuffer[id.x].noise * 1);//0.1);
+				//particleBuffer[id.x].noise =(particleBuffer[id.x].noise*particleBuffer[id.x].prevNoise)/2;
+			}*/
+			
+			particleBuffer[id.x].flags = 20;
+			//particleBuffer[id.x].noise = 0.87;
+		}
+		else if(distMod <= largeRad ){//if it's bigger, it's in a second outer radius which progresses to full (0)
+			/*
+				mapping [A, B] to [0, 1]
+				yourVal =  ((yourVal - A) / (B - A)) * (1 - 0) + 0;
+			*/
+			//particleBuffer[id.x].prevNoise = particleBuffer[id.x].noise = clamp(noise(particleBuffer[id.x].position) - (distL-sprayOrbRadius)/(sprayOrbOuterRadius-sprayOrbRadius), -1, 1);
+			//particleBuffer[id.x].prevNoise = (noise(float3(particleBuffer[id.x].position.x + randomSeed.x, particleBuffer[id.x].position.y + randomSeed.y, particleBuffer[id.x].position.z + randomSeed.z)) + 1) / 2 - 1;
+			//particleBuffer[id.x].noise = (noise(float3((particleBuffer[id.x].position.x + randomSeed.x)/d, (particleBuffer[id.x].position.y + randomSeed.y)/d, (particleBuffer[id.x].position.z + randomSeed.z)/d)) + 1) / 2 - 1;
+			particleBuffer[id.x].prevNoise = -(distMod / smallRad -1);
+			if(particleBuffer[id.x].noise < particleBuffer[id.x].prevNoise){
+				particleBuffer[id.x].noise = particleBuffer[id.x].prevNoise;
+			}
+			//else{
+			//	particleBuffer[id.x].noise *=0.5;
+			//}
+			
+			//particleBuffer[id.x].prevNoise = n
+			particleBuffer[id.x].flags = 10;
+		}
+	}
+	
+
+	//uint3 currentXZ = groupId * uint3(32, 1, 32) + threadId;
+    //vertexBuffer.Append(float3(currentXZ.x / 10.0, sin(currentXZ.x / 10.0)*cos(currentXZ.z / 10.0), currentXZ.z/10.0));
+}

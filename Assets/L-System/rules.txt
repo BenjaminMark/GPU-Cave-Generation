@@ -1,0 +1,4 @@
+C;+++FG++FUG+FG+FG+FFG+FFFDG;tunnel;9;9;0;0.0
+G;-FG[C--FUG-FG]-FFG[-FDG--FG];tunnel;-2;3;0;0.0
+G;FG+FG+FGUU[-DFG]-FG;tunnel;1;4;2;0.0
+G;FG[FF++G][FF--G]FG[FF++G][FF--G]FG[FF++G][FF--G]FG[FF++G][FF--G];room;0;4;0;-0.2

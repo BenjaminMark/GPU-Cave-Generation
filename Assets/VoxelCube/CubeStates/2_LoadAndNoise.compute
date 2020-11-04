@@ -1,0 +1,144 @@
+#pragma kernel main
+#include "noiseSimplex.cginc"
+
+//TODO: NOTE: to syntax highlight this stuff: http://forum.unity3d.com/threads/164982-MonoDevelop-Syntax-Highlighting-for-compute-shaders?p=1127569
+
+// The same particle data structure used by both the compute shader and the shader.
+struct VoxelParticle
+{
+	float3 position;
+	float3 velocity;
+	float noise;
+	float prevNoise;
+	int flags;
+	//float3 cubeVerts[8];
+};
+
+// The buffer holding the particles shared with the regular shader.
+RWStructuredBuffer<VoxelParticle> particleBuffer;
+//float3 cubed_verts[8];
+
+// parameters from GPU
+//float deltaTime;									// Even here deltaTime is needed!
+//float3 target;										// Mouse position.
+//int targetChanged;
+//float targetStrengh;								// Strengh, from the inspector!
+float sprayOrbRadius;
+float sprayOrbOuterRadius;
+float3 lPoint; 
+//float2 lNoise; 
+float3 lNoise; 
+float3 randomSeed;
+float noiseOctave;
+float noiseDistAtten;
+   
+
+// hash based 3d value noise; https://stackoverflow.com/questions/15628039/simplex-noise-shader
+// function taken from https://www.shadertoy.com/view/XslGRr
+// Created by inigo quilez - iq/2013
+// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+// ported from GLSL to HLSL
+float hash( float n )
+{
+    return frac(sin(n)*43758.5453);
+}
+
+float noise( float3 x )
+{
+    // The noise function returns a value in the range -1.0f -> 1.0f
+
+	//x = abs(x);
+
+    float3 p = floor(x);
+    float3 f = frac(x);
+
+    f       = f*f*(3.0-2.0*f);
+    float n = p.x + p.y*57.0 + 113.0*p.z;
+
+    return lerp(lerp(lerp( hash(n+0.0), hash(n+1.0),f.x),
+                   lerp( hash(n+57.0), hash(n+58.0),f.x),f.y),
+               lerp(lerp( hash(n+113.0), hash(n+114.0),f.x),
+                   lerp( hash(n+170.0), hash(n+171.0),f.x),f.y),f.z);
+}
+
+float customDist(float3 pt1, float3 pt2){
+	/*
+	xd = x2-x1
+	yd = y2-y1
+	zd = z2-z1
+	Distance = SquareRoot(xd*xd + yd*yd + zd*zd)
+	*/
+	float xd = (pt2.x *lNoise.x - pt1.x *lNoise.x);
+	float yd = (pt2.y *lNoise.y - pt1.y *lNoise.y);
+	float zd = (pt2.z *lNoise.z - pt1.z *lNoise.z);
+	//return (xd*xd *lNoise.x + yd*yd *lNoise.y + zd*zd *lNoise.x);
+	//return (xd*xd *lNoise.x + yd*yd *lNoise.y + zd*zd *lNoise.z);
+	return (xd*xd + yd*yd + zd*zd);
+}
+
+[numthreads(32,1,1)] 								// 32 is the minimal size to fullfill the wrap. this is just the number of thread to run by wrap, "x, y, z" make easy 3D indexing.
+//void main (uint3 id : SV_DispatchThreadID, uint3 groupId : SV_GroupID)
+void main (uint3 id : SV_DispatchThreadID)
+{
+	/*
+	if(targetChanged){
+		// particleBuffer[id.x] is the particle this thread must Update, according to the thread ID.
+		// id.x ---> x is x in (32, 1, 1)
+		//http://msdn.microsoft.com/en-us/library/windows/desktop/ff471566(v=vs.85).aspx
+		
+		// Direction and distance to target.
+		float3 dir = normalize(target - particleBuffer[id.x].position);
+		float dist = distance(target, particleBuffer[id.x].position); //was float3
+		//float facing = dot(dir, target);
+
+		// Compute velocity and position of this particle.
+		//particleBuffer[id.x].velocity += targetStrengh * dir * deltaTime / dist;
+		//particleBuffer[id.x].position += particleBuffer[id.x].velocity * deltaTime;
+		
+		//the position doesn't change; I'm using the velocity for colouring purposes only
+		particleBuffer[id.x].velocity = (targetStrengh * dir * deltaTime / dist)*100;
+	}
+	*/	
+	/*
+	float3 alteredPos = float3( particleBuffer[id.x].position.x * lNoise.x, 
+								particleBuffer[id.x].position.y * lNoise.y, 
+								particleBuffer[id.x].position.z * lNoise.x);
+								*/
+	//float distL = distance(lPoint, particleBuffer[id.x].position);
+	float distMod = customDist(lPoint, particleBuffer[id.x].position);
+	if(distMod <= 1){//TODO: we can make the L system path thicker here by saying <= 2 or 3 etc
+		particleBuffer[id.x].flags = -10;//-10 == l-point
+		//TODO: note this means the centre of each tunnel will be empty.
+		particleBuffer[id.x].noise = 1;
+		particleBuffer[id.x].prevNoise = 1;
+	}									//if we didn't already calculate noise for this point, or if it's an OuterRadius point
+	else if(particleBuffer[id.x].flags == -20 || particleBuffer[id.x].flags == 10){
+	
+		//float d = 100 * (distMod/6);//20// the larger distMod, the more weight this 100 has. distMod == 1 should mean d is 1.
+		float d = noiseOctave * (distMod/noiseDistAtten);
+		
+								
+		if(distMod <= sprayOrbRadius * sprayOrbRadius ){
+			particleBuffer[id.x].prevNoise = snoise(float3((particleBuffer[id.x].position.x + randomSeed.x)/d, (particleBuffer[id.x].position.y + randomSeed.y)/d, (particleBuffer[id.x].position.z + randomSeed.z)/d));
+
+			particleBuffer[id.x].flags = 20;
+			//particleBuffer[id.x].noise = 0.87;
+		}
+		else if(distMod <= sprayOrbOuterRadius * sprayOrbOuterRadius ){//if it's bigger, it's in a second outer radius which progresses to full (0)
+			/*
+				mapping [A, B] to [0, 1]
+				yourVal =  ((yourVal - A) / (B - A)) * (1 - 0) + 0;
+			*/
+			//particleBuffer[id.x].prevNoise = particleBuffer[id.x].noise = clamp(snoise(particleBuffer[id.x].position) - (distL-sprayOrbRadius)/(sprayOrbOuterRadius-sprayOrbRadius), -1, 1);
+			//particleBuffer[id.x].prevNoise = (snoise(float3(particleBuffer[id.x].position.x + randomSeed.x, particleBuffer[id.x].position.y + randomSeed.y, particleBuffer[id.x].position.z + randomSeed.z)) + 1) / 2 - 1;
+			particleBuffer[id.x].prevNoise = (snoise(float3((particleBuffer[id.x].position.x + randomSeed.x)/d, (particleBuffer[id.x].position.y + randomSeed.y)/d, (particleBuffer[id.x].position.z + randomSeed.z)/d)) + 1) / 2 - 1;
+			
+			//particleBuffer[id.x].prevNoise = n
+			particleBuffer[id.x].flags = 10;
+		}
+	}
+	
+
+	//uint3 currentXZ = groupId * uint3(32, 1, 32) + threadId;
+    //vertexBuffer.Append(float3(currentXZ.x / 10.0, sin(currentXZ.x / 10.0)*cos(currentXZ.z / 10.0), currentXZ.z/10.0));
+}

@@ -1,0 +1,166 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel landMarks
+
+struct VoxelParticle
+{
+	float3 position;
+	float3 velocity;
+	float noise;
+	float prevNoise;
+	int flags;
+};
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWStructuredBuffer<VoxelParticle> particleBuffer;
+
+// parameters from GPU
+float deltaTime;									// Even here deltaTime is needed!
+float3 target;										// Mouse position.
+int targetChanged;
+float targetStrengh;								// Strengh, from the inspector!
+float sprayOrbRadius;
+float spacing;
+int cubeSize;
+float3 tilePos;
+int frameNumber;
+int seedMod;
+float3 randomSeed;
+
+//TODO: READ THIS: https://stackoverflow.com/questions/7367770/how-to-flatten-or-index-3d-array-in-1d-array
+//			reverse: https://stackoverflow.com/questions/14845084/how-do-i-convert-a-1d-index-into-a-3d-index?rq=1
+int coordsToIndex(int x, int y,int z){
+	//Flat[x + WIDTH * (y + DEPTH * z)] = Original[x, y, z]
+	
+	//return x + cubeSize * (y + cubeSize * z);
+	//I have moved the x y z 's around, because the formula didn't match the way I built the cube in the first place
+	return x + (cubeSize) * (z + (cubeSize) * y);
+	//return z + (cubeSize*tilePos[0]) * (y + (cubeSize*tilePos[2]) * x); 
+
+}
+
+float rnd(uint seed)
+{
+    seed = (seed ^ 61) ^ (seed >> 16);
+    seed *= 9;
+    seed = seed ^ (seed >> 4);
+    seed *= 0x27d4eb2d;
+    seed = seed ^ (seed >> 15);
+    return asfloat(seed/4294967296.0);
+}
+
+[numthreads(32,1,1)]
+void landMarks (uint3 id : SV_DispatchThreadID)
+{
+	float threshold = 0.0;
+
+	if(targetChanged == 1){
+		// Direction and distance to target.
+		float3 dir = normalize(target - particleBuffer[id.x].position);
+		float dist = distance(target, particleBuffer[id.x].position); //was float3
+		particleBuffer[id.x].velocity = (targetStrengh * dir * deltaTime / dist)*100;
+	}
+	
+	particleBuffer[id.x].noise = particleBuffer[id.x].prevNoise;
+	VoxelParticle currentPoint = particleBuffer[id.x];
+	
+
+	if(frameNumber == 0){
+	
+		if(currentPoint.noise > threshold){
+			return;
+		}
+	
+		VoxelParticle tempPoint;
+		int sumDownNeighbors = 0;
+		int sumUpNeighbors = 0;
+		//Down
+		for(int x = -1; x <=1; x++){
+			for(int z = -1; z <= 1; z++){
+				tempPoint = particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing + x,
+	    											 	 (particleBuffer[id.x].position.y-tilePos[1]) / spacing - 1, 
+	    											 	 (particleBuffer[id.x].position.z-tilePos[2]) / spacing + z)];
+	    		if(tempPoint.noise > threshold){
+	    			sumDownNeighbors++;
+	    		}							 			 
+			}
+		}
+	
+		//up
+		for(int i = -1; i <=1; i++){
+			for(int j = -1; j <= 1; j++){
+				tempPoint = particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing + i,
+	    											 	 (particleBuffer[id.x].position.y-tilePos[1]) / spacing + 1, 
+	    											 	 (particleBuffer[id.x].position.z-tilePos[2]) / spacing + j)];
+	    		if(tempPoint.noise > threshold){
+	    			sumUpNeighbors++;
+	    		}							 			 
+			}
+		}
+		
+		if( rnd(asuint(id.x+seedMod)) > 0.99 && (sumUpNeighbors >= 7 || sumDownNeighbors >=  7)){ 
+			currentPoint.flags = 30; //Makes an anchor point.
+			currentPoint.velocity.x = 99999999;
+		}
+	} else {
+		VoxelParticle tempPoint;
+		bool anchorNeighbor = false;
+		
+		for(int i = -1; i <= 1; i++){
+	    	for(int j = -1; j <= 1; j++){
+	    		for(int k = -1; k <= 1; k++){
+	    			if(!(i == 0 && j == 0 && k == 0)){
+	    				tempPoint = particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing + i,
+	    											 			 (particleBuffer[id.x].position.y-tilePos[1]) / spacing + j, 
+	    											 			 (particleBuffer[id.x].position.z-tilePos[2]) / spacing + k)
+	    											  ];
+	    					    							  				  				  				  
+		    			//NOTE: .noise is between -1 and 1. 
+		    			//		.flags so far can be -20 (nothing), -10 (l-system) and 10 (outer wall/shell of tunnel)
+		    			
+	    											  
+	    				//this is to never map outside the edge of our cube of cubes, because it would wrap to the opposite edge
+	    				if(distance(tempPoint.position, particleBuffer[id.x].position) > spacing*spacing){	
+	    					//tempPoint.noise = 1.0;//default 1.0;
+	    					//tempPoint.noise = particleBuffer[id.x].noise;
+	    					//if( particleBuffer[id.x].noise > threshold)
+	    						//sumNeighbors++;
+	    					
+	    				}
+						else if( tempPoint.flags == 30){
+		    					anchorNeighbor = true;
+		    				}
+		    				
+		    				
+		    			//this colours the points that are being sampled; for debugging.
+						/*
+						particleBuffer[coordsToIndex((particleBuffer[id.x].position.x-tilePos[0]) / spacing + i,
+		    										 (particleBuffer[id.x].position.y-tilePos[1]) / spacing + j, 
+		    										 (particleBuffer[id.x].position.z-tilePos[2]) / spacing + k)
+		    											  ].velocity = 99999;
+		    			*/
+	    				
+	    				}
+	    			}
+
+	    		}
+	    	}
+	    	
+	    	float coin = rnd(asuint(id.x+seedMod/2));
+	    	
+	    	if(anchorNeighbor && coin > 0.5){
+	    		currentPoint.flags = 30;
+	    		if(currentPoint.noise > threshold){
+	    			currentPoint.prevNoise = (currentPoint.noise *  -1) -0.5;
+	    		}
+	    	}
+	    		
+	
+	}
+	particleBuffer[id.x] = currentPoint;
+}
+
+
+
+
+

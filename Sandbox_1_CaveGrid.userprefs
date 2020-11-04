@@ -1,0 +1,14 @@
+﻿<Properties>
+  <MonoDevelop.Ide.Workspace />
+  <MonoDevelop.Ide.Workbench ActiveDocument="..\..\1gam\Death\Assets\Tiles\tileMap.txt">
+    <Files>
+      <File FileName="..\..\1gam\Death\Assets\Scripts\TerrainGen\LoadTiles.cs" Line="26" Column="14" />
+      <File FileName="Assets\L-System\LSystem.cs" Line="6" Column="1" />
+      <File FileName="..\..\1gam\Death\Assets\Tiles\tileMap.txt" Line="8" Column="23" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+</Properties>
